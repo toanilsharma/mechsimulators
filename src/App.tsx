@@ -60,6 +60,8 @@ import { MonteCarloModal } from './components/MonteCarlo/MonteCarloModal';
 import { ExergyCarbonModal } from './components/ExergyCarbon/ExergyCarbonModal';
 import { MechanicalPortalPage } from './components/Portal/MechanicalPortalPage';
 import { MissionControlWorkbench } from './components/Workbench/MissionControlWorkbench';
+import { MechanicalContextBar, GlobalCmdkSearch, MECHANICAL_SIMS } from './components/Layout';
+import { LiveSimulatorsFooter } from './components/Footer/LiveSimulatorsFooter';
 
 function MainAppShell() {
   const {
@@ -407,10 +409,55 @@ function MainAppShell() {
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
 
+      {/* 2b. Secondary Ultra-Thin Context Bar: LiveSimulators Hub › Mechanical Workbench › Turbomachinery › API 610 Pump */}
+      <MechanicalContextBar
+        simulatorLabel={
+          activeRoute === 'pump'
+            ? 'API 610 Pump'
+            : activeRoute === 'compressor'
+            ? 'API 617 Compressor'
+            : activeRoute === 'recip'
+            ? 'API 618 Recip'
+            : activeRoute === 'turbine'
+            ? 'API 612 Turbine'
+            : activeRoute === 'gearbox'
+            ? 'AGMA 2001 Gearbox'
+            : activeRoute === 'journal'
+            ? 'API 684 Journal Bearing'
+            : activeRoute === 'rotor'
+            ? 'ISO 1940 Rotor'
+            : activeRoute === 'bearing'
+            ? 'ISO 281 Bearing'
+            : activeRoute === 'pipe'
+            ? 'ASME B31.3 Piping'
+            : activeRoute === 'seal'
+            ? 'API 682 Seal Flush'
+            : activeRoute === 'alignment'
+            ? 'API 686 Alignment'
+            : 'API 610 Pump'
+        }
+        categoryLabel={
+          ['pump', 'compressor', 'turbine', 'gearbox'].includes(activeRoute)
+            ? 'Turbomachinery'
+            : activeRoute === 'recip'
+            ? 'Pumps & Compressors'
+            : ['journal', 'rotor', 'bearing'].includes(activeRoute)
+            ? 'Vibration & Bearings'
+            : 'Piping & Reliability'
+        }
+        workbenchHref="/mechanical"
+        onNavigate={(path) => {
+          if (path === '/mechanical' || path.startsWith('/mechanical#')) {
+            setActiveRoute('home');
+          }
+        }}
+      />
+
+
       {/* 3. Main Workspace with Smooth Scrolling */}
       <main
         id="main-content"
-        className="flex-1 w-full min-h-[calc(100dvh-52px)] overflow-y-auto overflow-x-hidden custom-scrollbar"
+        className="flex-1 w-full min-h-[calc(100dvh-54px)] overflow-x-hidden"
         role="main"
       >
         {activeRoute === 'pump' && (
@@ -683,14 +730,24 @@ function MainAppShell() {
         onClose={() => setIsExergyCarbonOpen(false)}
       />
 
-      {/* 21. Fast Engineering Command Palette (Cmd+K / Ctrl+K) */}
-      <CommandPalette
+      {/* 21. Global CmdK Search with mechanicalSims (Ctrl+K) */}
+      <GlobalCmdkSearch
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        onOpenAudit={() => setIsAuditModalOpen(true)}
-        onOpenReport={() => setIsReportModalOpen(true)}
-        onOpenInfo={() => setIsInfoModalOpen(true)}
+        mechanicalSims={MECHANICAL_SIMS}
+        currentRoute={`/mechanical/lab/${activeRoute}`}
+        onNavigate={(route) => {
+          const match = route.match(/\/mechanical\/lab\/([a-zA-Z0-9_-]+)/);
+          if (match && match[1]) {
+            setActiveRoute(match[1] as any);
+          } else if (route === '/mechanical' || route.startsWith('/mechanical#')) {
+            setActiveRoute('home');
+          } else {
+            window.location.href = route;
+          }
+        }}
       />
+
     </div>
   );
 }

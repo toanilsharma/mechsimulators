@@ -359,7 +359,7 @@ export const SimulatorFleetSection: React.FC<SimulatorFleetSectionProps> = ({
   let cardCounter = 0;
 
   return (
-    <section className="w-full px-4 lg:px-6 max-w-[1720px] mx-auto select-none">
+    <section className="w-full px-4 lg:px-6 max-w-[1720px] mx-auto">
       {/* ----------------------------------------------------------------- */}
       {/* SECTION HEADER BLOCK: 32px top / 24px bottom (Strict 8pt System)   */}
       {/* ----------------------------------------------------------------- */}

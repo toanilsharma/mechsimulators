@@ -445,7 +445,7 @@ export const KnowledgeBaseHub: React.FC<KnowledgeBaseHubProps> = ({ initialTab =
   }, [searchQuery]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#080b0f] text-[#d1d5db] font-sans overflow-hidden">
+    <div className="w-full min-h-full flex flex-col bg-[#080b0f] text-[#d1d5db] font-sans">
       {/* Top Header & Breadcrumb Bar */}
       <div className="px-4 sm:px-8 py-3.5 bg-[#0d1117] border-b border-[#21262d] flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
@@ -597,7 +597,7 @@ export const KnowledgeBaseHub: React.FC<KnowledgeBaseHubProps> = ({ initialTab =
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-8 space-y-6">
+      <div className="flex-1 p-4 sm:p-8 space-y-6">
         {/* TAB 1: STANDARDS MATRIX */}
         {activeTab === 'standards' && (
           <div className="space-y-6 max-w-7xl mx-auto">

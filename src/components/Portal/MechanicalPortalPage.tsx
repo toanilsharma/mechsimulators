@@ -103,7 +103,7 @@ export const MechanicalPortalPage: React.FC = () => {
   return (
     <div
       id="mechanical-portal-page"
-      className="w-full h-full overflow-y-auto bg-[#070b14] text-slate-100 flex flex-col font-sans selection:bg-sky-500/30 selection:text-white pb-16 custom-scrollbar"
+      className="w-full min-h-full bg-[#070b14] text-slate-100 flex flex-col font-sans selection:bg-sky-500/30 selection:text-white pb-16"
     >
       {/* 1. Portal Welcome Header */}
       <section className="relative border-b border-[#162033] bg-gradient-to-b from-[#0c1526] via-[#090f1c] to-[#070b14] px-4 py-8 sm:py-12">

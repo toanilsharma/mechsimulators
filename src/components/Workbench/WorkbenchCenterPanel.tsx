@@ -198,7 +198,7 @@ export function WorkbenchCenterPanel<TInputs extends Record<string, any>, TOutpu
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#080b0f] relative overflow-hidden select-none min-w-0">
+    <div className="w-full min-h-[380px] md:h-full flex flex-col bg-[#080b0f] relative overflow-hidden min-w-0">
       {/* Top HUD Telemetry Bar (Desktop) */}
       <div className="h-9 px-3 bg-[#161b22] border-b border-[#30363d] hidden md:flex items-center justify-between shrink-0 z-20">
         {/* Left Telemetry Indicators & Simulation Cockpit Controls */}
@@ -537,7 +537,7 @@ export function WorkbenchCenterPanel<TInputs extends Record<string, any>, TOutpu
       </div>
 
       {/* Hero Visualizer Canvas Area */}
-      <div className="flex-1 w-full h-full relative overflow-hidden bg-[#080b0f]">
+      <div className="flex-1 w-full min-h-[340px] md:h-full relative overflow-hidden bg-[#080b0f]">
         {/* Floating Scenario Consequence Toast / HUD (Clean, Minimal, Direct) */}
         {activeScenario && showToast && (
           <div className="absolute top-3 left-3 right-3 md:left-4 md:right-auto md:max-w-md z-30 pointer-events-auto transition-all animate-fadeIn">

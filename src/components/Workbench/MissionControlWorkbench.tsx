@@ -24,6 +24,77 @@ import {
 } from 'lucide-react';
 import { SimulatorId } from '../../types/common';
 import { SimulatorFleetSection } from '../Fleet/SimulatorFleetSection';
+import { LiveSimulatorsFooter } from '../Footer/LiveSimulatorsFooter';
+import {
+  ScenarioTimeScrubber,
+  ScenarioDefinition,
+  TransientEventMarker,
+  formatPrecisionTime,
+} from './ScenarioTimeScrubber';
+import { machineryAcoustics } from '../../utils/machineryAcoustics';
+
+const WORKBENCH_SCENARIOS: ScenarioDefinition[] = [
+  {
+    id: 'nominal',
+    name: 'Nominal (BEP)',
+    shortName: 'Continuous Duty',
+    category: 'nominal',
+    description: 'API 610 continuous duty baseline at Best Efficiency Point (BEP). Balanced hydraulic equilibrium.',
+    badge: 'API 610',
+    params: {
+      rpm: 1750,
+      flowRate: 120.0,
+      staticHead: 3.5,
+      fluidTemp: 45.0,
+      impellerTrim: 215,
+    },
+  },
+  {
+    id: 'fouled_strainer',
+    name: 'Fouled Strainer',
+    shortName: 'Inlet Blockage',
+    category: 'fault',
+    description: 'Suction basket strainer clogged with particulate. Static head collapses to -1.2m, triggering suction cavitation.',
+    badge: 'FAULT: ΔP',
+    params: {
+      rpm: 1750,
+      flowRate: 98.0,
+      staticHead: -1.2,
+      fluidTemp: 45.0,
+      impellerTrim: 215,
+    },
+  },
+  {
+    id: 'discharge_trip',
+    name: 'Discharge Trip',
+    shortName: 'Valve Slam',
+    category: 'fault',
+    description: 'Discharge isolation valve inadvertent trip. Flow throttles to shutoff threshold (22 m³/h), causing hydraulic recirculation.',
+    badge: 'FAULT: TRIP',
+    params: {
+      rpm: 1750,
+      flowRate: 22.0,
+      staticHead: 3.5,
+      fluidTemp: 52.0,
+      impellerTrim: 215,
+    },
+  },
+  {
+    id: 'loss_of_prime',
+    name: 'Loss of Prime',
+    shortName: 'Vapor Lock',
+    category: 'fault',
+    description: 'Loss of suction liquid seal with severe air entrainment. Head collapses and fluid boils at impeller eye.',
+    badge: 'FAULT: VAPOR',
+    params: {
+      rpm: 1750,
+      flowRate: 35.0,
+      staticHead: -2.2,
+      fluidTemp: 76.0,
+      impellerTrim: 215,
+    },
+  },
+];
 
 interface MissionControlWorkbenchProps {
   onLaunchSimulator?: (id: SimulatorId) => void;
@@ -41,13 +112,37 @@ export const MissionControlWorkbench: React.FC<MissionControlWorkbenchProps> = (
   const [fluidTemp, setFluidTemp] = useState<number>(45.0); // °C
   const [impellerTrim, setImpellerTrim] = useState<number>(215); // mm
 
-  // Transport Controls
+  // Scenario Fault Injection & Transient State
+  const [activeScenarioId, setActiveScenarioId] = useState<string>('nominal');
+  const [isTransientActive, setIsTransientActive] = useState<boolean>(false);
+  const [transientMessage, setTransientMessage] = useState<string>('');
+  const [transientMarkers, setTransientMarkers] = useState<TransientEventMarker[]>([]);
+
+  // Transport & History Buffer State
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [simSpeed, setSimSpeed] = useState<number>(1.0);
   const [simTime, setSimTime] = useState<number>(0);
+  const [maxRecordedTime, setMaxRecordedTime] = useState<number>(0);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [showParticles, setShowParticles] = useState<boolean>(true);
   const [isCanvasFullscreen, setIsCanvasFullscreen] = useState<boolean>(false);
+
+  // References for live animation, history buffer & time-scrubbing
+  const simTimeRef = useRef<number>(0);
+  const maxRecordedTimeRef = useRef<number>(0);
+  const activeScenarioIdRef = useRef<string>('nominal');
+  const isTransientActiveRef = useRef<boolean>(false);
+  const transientTimeoutRef = useRef<number | null>(null);
+  const historyBufferRef = useRef<Array<{
+    time: number;
+    rpm: number;
+    flowRate: number;
+    staticHead: number;
+    fluidTemp: number;
+    impellerTrim: number;
+    scenarioId: string;
+  }>>([]);
+  const lastSnapshotTimeRef = useRef<number>(0);
 
   // Canvas Ref
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -109,21 +204,135 @@ export const MissionControlWorkbench: React.FC<MissionControlWorkbenchProps> = (
   const tipSpeed = (Math.PI * (impellerTrim / 1000) * rpm) / 60; // m/s
 
   // -------------------------------------------------------------
-  // 3. Transport Controls Handlers
+  // 3. Transport Controls & Scenario Handlers
   // -------------------------------------------------------------
-  const handleTogglePlay = () => setIsPlaying((prev) => !prev);
-  const handleReset = () => {
+  const handleTogglePlay = useCallback(() => {
+    setIsPlaying((prev) => !prev);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setIsPlaying(false);
     setRpm(1750);
     setFlowRate(120.0);
     setStaticHead(3.5);
     setFluidTemp(45.0);
     setImpellerTrim(215);
     setSimTime(0);
-  };
-  const handleStep = () => {
-    setSimTime((t) => t + 0.1);
-    impellerAngleRef.current += (rpm / 60) * 2 * Math.PI * 0.1;
-  };
+    simTimeRef.current = 0;
+    setMaxRecordedTime(0);
+    maxRecordedTimeRef.current = 0;
+    setActiveScenarioId('nominal');
+    activeScenarioIdRef.current = 'nominal';
+    setIsTransientActive(false);
+    isTransientActiveRef.current = false;
+    setTransientMessage('');
+    setTransientMarkers([]);
+    historyBufferRef.current = [];
+    impellerAngleRef.current = 0;
+  }, []);
+
+  const handleStepForward = useCallback((dt: number = 0.1) => {
+    setIsPlaying(false);
+    const nextTime = simTimeRef.current + dt;
+    simTimeRef.current = nextTime;
+    setSimTime(nextTime);
+    if (nextTime > maxRecordedTimeRef.current) {
+      maxRecordedTimeRef.current = nextTime;
+      setMaxRecordedTime(nextTime);
+    }
+    impellerAngleRef.current += (rpm / 60) * 2 * Math.PI * dt;
+  }, [rpm]);
+
+  const handleScrubTime = useCallback((targetTime: number) => {
+    setIsPlaying(false);
+    simTimeRef.current = targetTime;
+    setSimTime(targetTime);
+
+    // Find nearest snapshot in history buffer
+    const history = historyBufferRef.current;
+    if (history.length > 0) {
+      let closest = history[0];
+      let minDiff = Math.abs(history[0].time - targetTime);
+
+      for (let i = 1; i < history.length; i++) {
+        const diff = Math.abs(history[i].time - targetTime);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = history[i];
+        }
+      }
+
+      if (closest) {
+        setRpm(closest.rpm);
+        setFlowRate(closest.flowRate);
+        setStaticHead(closest.staticHead);
+        setFluidTemp(closest.fluidTemp);
+        setImpellerTrim(closest.impellerTrim);
+        setActiveScenarioId(closest.scenarioId);
+        activeScenarioIdRef.current = closest.scenarioId;
+        impellerAngleRef.current = (targetTime * (closest.rpm / 60) * 2 * Math.PI) % (Math.PI * 2);
+      }
+    }
+  }, []);
+
+  const handleJumpToLive = useCallback(() => {
+    const liveTime = maxRecordedTimeRef.current;
+    simTimeRef.current = liveTime;
+    setSimTime(liveTime);
+    setIsPlaying(true);
+  }, []);
+
+  const handleScenarioChange = useCallback((scenarioId: string) => {
+    setActiveScenarioId(scenarioId);
+    activeScenarioIdRef.current = scenarioId;
+
+    const scenario = WORKBENCH_SCENARIOS.find((s) => s.id === scenarioId);
+    if (!scenario) return;
+
+    if (scenario.params.rpm !== undefined) setRpm(scenario.params.rpm);
+    if (scenario.params.flowRate !== undefined) setFlowRate(scenario.params.flowRate);
+    if (scenario.params.staticHead !== undefined) setStaticHead(scenario.params.staticHead);
+    if (scenario.params.fluidTemp !== undefined) setFluidTemp(scenario.params.fluidTemp);
+    if (scenario.params.impellerTrim !== undefined) setImpellerTrim(scenario.params.impellerTrim);
+
+    machineryAcoustics.updateState({
+      rpm: scenario.params.rpm ?? rpm,
+      cavitationIntensity: scenario.category === 'fault' ? 0.75 : 0.05,
+      vibrationIntensity: scenario.category === 'fault' ? 0.6 : 0.1,
+      isSurging: scenario.id === 'discharge_trip',
+    });
+
+    if (scenario.category === 'fault') {
+      setIsTransientActive(true);
+      isTransientActiveRef.current = true;
+      setTransientMessage(scenario.name);
+
+      // Add transient marker at current time on timeline
+      const currentTime = simTimeRef.current;
+      setTransientMarkers((prev) => [
+        ...prev.filter((m) => Math.abs(m.time - currentTime) > 0.4),
+        {
+          id: `marker-${Date.now()}`,
+          time: currentTime,
+          scenarioId: scenario.id,
+          label: scenario.name,
+        },
+      ]);
+
+      if (transientTimeoutRef.current) {
+        clearTimeout(transientTimeoutRef.current);
+      }
+      transientTimeoutRef.current = window.setTimeout(() => {
+        setIsTransientActive(false);
+        isTransientActiveRef.current = false;
+        setTransientMessage('');
+      }, 4500);
+    } else {
+      setIsTransientActive(false);
+      isTransientActiveRef.current = false;
+      setTransientMessage('');
+    }
+  }, [rpm]);
 
   // -------------------------------------------------------------
   // 4. Real-time Canvas Physics Simulation Engine (60 FPS)
@@ -158,9 +367,33 @@ export const MissionControlWorkbench: React.FC<MissionControlWorkbenchProps> = (
       lastTimestamp = now;
 
       if (isPlaying) {
-        setSimTime((t) => t + dt * simSpeed);
+        const nextTime = simTimeRef.current + dt * simSpeed;
+        simTimeRef.current = nextTime;
+        setSimTime(nextTime);
+        if (nextTime > maxRecordedTimeRef.current) {
+          maxRecordedTimeRef.current = nextTime;
+          setMaxRecordedTime(nextTime);
+        }
+
         const angularVelocity = (rpm / 60) * 2 * Math.PI; // rad/s
         impellerAngleRef.current += angularVelocity * dt * simSpeed;
+
+        // Save history snapshot every 50ms (20Hz)
+        if (now - lastSnapshotTimeRef.current >= 50) {
+          lastSnapshotTimeRef.current = now;
+          historyBufferRef.current.push({
+            time: nextTime,
+            rpm,
+            flowRate,
+            staticHead,
+            fluidTemp,
+            impellerTrim,
+            scenarioId: activeScenarioIdRef.current,
+          });
+          if (historyBufferRef.current.length > 1200) {
+            historyBufferRef.current.shift();
+          }
+        }
       }
 
       // Responsive canvas scaling
@@ -611,154 +844,161 @@ export const MissionControlWorkbench: React.FC<MissionControlWorkbenchProps> = (
               </div>
             </div>
 
-            {/* Transport Controls Row */}
-            <div className="pt-2 border-t border-[#1E293B] mt-1.5">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1">
-                Transport Controls
+            {/* Quick Hydraulic Summary & Baseline Reset */}
+            <div className="pt-2 border-t border-[#1E293B] mt-1.5 flex items-center justify-between text-[11px] font-mono">
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-400">BEP RATIO:</span>
+                <span className={`font-bold ${flowDeviation < 0.7 || flowDeviation > 1.25 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {(flowDeviation * 100).toFixed(0)}%
+                </span>
               </div>
-              <div className="grid grid-cols-4 gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleTogglePlay}
-                  className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-md font-semibold text-[11px] transition-all cursor-pointer ${
-                    isPlaying
-                      ? 'bg-[#06B6D4] text-slate-950 shadow-[0_0_10px_rgba(6,182,212,0.4)] font-bold'
-                      : 'bg-[#1E293B] hover:bg-[#334155] text-slate-200'
-                  }`}
-                  title={isPlaying ? 'Pause Simulation' : 'Play Simulation'}
-                >
-                  {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
-                  <span>{isPlaying ? 'PAUSE' : 'PLAY'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleStep}
-                  disabled={isPlaying}
-                  className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-md bg-[#1E293B] hover:bg-[#334155] disabled:opacity-40 text-slate-200 text-[11px] font-semibold transition-all cursor-pointer"
-                  title="Step Forward +0.1s"
-                >
-                  <StepForward className="w-3 h-3" />
-                  <span>STEP</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-md bg-[#1E293B] hover:bg-[#334155] text-slate-200 text-[11px] font-semibold transition-all cursor-pointer"
-                  title="Reset to BEP Defaults"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>RESET</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSimSpeed((s) => (s === 1.0 ? 2.0 : s === 2.0 ? 0.5 : 1.0))}
-                  className="flex items-center justify-center py-1.5 px-1.5 rounded-md bg-[#1E293B] hover:bg-[#334155] text-[#06B6D4] font-mono text-[11px] font-bold transition-all cursor-pointer"
-                  title="Toggle Simulation Speed"
-                >
-                  {simSpeed}X
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="flex items-center gap-1 px-2 py-1 rounded bg-[#161b22] hover:bg-[#21262d] border border-[#30363d] text-slate-300 text-[10px] transition-colors cursor-pointer"
+                title="Reset to BEP baseline"
+              >
+                <RotateCcw className="w-3 h-3 text-[#06B6D4]" />
+                <span>RESET BEP</span>
+              </button>
             </div>
           </div>
 
           {/* ------------------------------------------------------------- */}
-          {/* PANE 2: CENTER PANE (50% Width / 6 Cols) - Full-Bleed Canvas  */}
+          {/* PANE 2: CENTER PANE (50% Width / 6 Cols) - Canvas & Time-Scrubber */}
           {/* ------------------------------------------------------------- */}
-          <div className="lg:col-span-6 relative flex flex-col bg-[#0F172A] border border-[#1E293B] rounded-xl overflow-hidden shadow-2xl h-[380px] lg:h-[495px]">
-            {/* Simulation Canvas (Fills Pane with 25% Reduced Dimensions) */}
-            <canvas
-              ref={canvasRef}
-              width={750}
-              height={495}
-              className="w-full h-full object-cover block"
+          <div className="lg:col-span-6 flex flex-col justify-between bg-[#0F172A] border border-[#1E293B] rounded-xl overflow-hidden shadow-2xl p-2.5 sm:p-3 gap-2.5">
+            {/* Simulation Canvas Frame with Live HUD Overlays */}
+            <div className="relative w-full h-[250px] sm:h-[285px] lg:h-[295px] bg-[#070b12] rounded-lg overflow-hidden border border-[#1E293B] touch-pan-y shrink-0">
+              <canvas
+                ref={canvasRef}
+                width={750}
+                height={380}
+                className="w-full h-full object-cover block touch-pan-y"
+              />
+
+              {/* HUD Top-Left: Machine Telemetry */}
+              <div className="absolute top-2 left-2 pointer-events-none flex flex-col gap-0.5 bg-[#0F172A]/90 backdrop-blur-md border border-[#1E293B] px-2.5 py-1 rounded-md shadow-md z-10">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#06B6D4] animate-pulse motion-reduce:animate-none" />
+                  <span className="font-mono text-[10.5px] font-bold text-slate-100 tracking-wider">
+                    ASSET: P-101A [API 610 OH2]
+                  </span>
+                </div>
+                <div className="text-[9.5px] font-mono text-slate-400">
+                  u<sub className="text-[7.5px]">2</sub>: <span className="text-[#06B6D4] font-semibold">{tipSpeed.toFixed(1)} m/s</span> | RK4 SOLVER
+                </div>
+              </div>
+
+              {/* HUD Top-Right: Transient Badge & Status Badge */}
+              <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20">
+                {/* Flashing Amber TRANSIENT DETECTED Badge */}
+                {isTransientActive && (
+                  <div
+                    role="alert"
+                    aria-live="assertive"
+                    className="flex items-center gap-1.5 bg-amber-500/25 border-2 border-amber-500/90 backdrop-blur-md px-2.5 py-1 rounded-md shadow-[0_0_18px_rgba(245,158,11,0.5)] animate-pulse motion-reduce:animate-none"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-bounce motion-reduce:animate-none" />
+                    <div className="flex flex-col">
+                      <span className="font-mono text-[10px] sm:text-[10.5px] font-extrabold text-amber-300 tracking-wider leading-none">
+                        ⚡ TRANSIENT DETECTED
+                      </span>
+                      <span className="font-mono text-[8.5px] text-amber-200/90 leading-tight">
+                        {transientMessage || 'Hydraulic Step'} &bull; {formatPrecisionTime(simTime)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Machine Equilibrium Status Badge */}
+                {isCavitating ? (
+                  <div className="flex items-center gap-1.5 bg-[#F59E0B]/15 border border-[#F59E0B]/60 backdrop-blur-md px-2 py-1 rounded-md shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                    <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B]" />
+                    <span className="font-mono text-[10px] sm:text-[10.5px] font-bold text-[#F59E0B] tracking-wide">
+                      CAVITATION (-{cavitationDeficit.toFixed(2)}m)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 bg-[#06B6D4]/15 border border-[#06B6D4]/50 backdrop-blur-md px-2 py-1 rounded-md shadow-[0_0_12px_rgba(6,182,212,0.2)]">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#06B6D4]" />
+                    <span className="font-mono text-[10px] sm:text-[10.5px] font-bold text-[#06B6D4] tracking-wide">
+                      NOMINAL (BEP {Math.round(flowDeviation * 100)}%)
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* HUD Bottom-Left: Real-time Pressure & Margins */}
+              <div className="absolute bottom-2 left-2 pointer-events-none bg-[#0F172A]/90 backdrop-blur-md border border-[#1E293B] px-2 py-1 rounded-md shadow-md z-10">
+                <div className="grid grid-cols-2 gap-x-2.5 gap-y-0.5 text-[9.5px] font-mono leading-tight">
+                  <div>
+                    <span className="text-slate-400">NPSH<sub className="text-[7.5px]">a</sub>: </span>
+                    <span className={`font-bold ${isCavitating ? 'text-[#F59E0B]' : 'text-[#06B6D4]'}`}>
+                      {npsha.toFixed(2)}m
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">NPSH<sub className="text-[7.5px]">r</sub>: </span>
+                    <span className="text-slate-200 font-bold">{npshr.toFixed(2)}m</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">MARGIN: </span>
+                    <span className={`font-bold ${npshMarginRatio < 1.0 ? 'text-[#F59E0B]' : 'text-emerald-400'}`}>
+                      {npshMarginRatio.toFixed(2)}x
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">HEAD: </span>
+                    <span className="text-slate-200 font-bold">{currentHead.toFixed(1)}m</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* HUD Bottom-Right: Viewport & Overlay Toggles */}
+              <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-[#0F172A]/90 backdrop-blur-md border border-[#1E293B] p-0.5 rounded-md shadow-md z-10">
+                <button
+                  type="button"
+                  onClick={() => setShowGrid((g) => !g)}
+                  className={`p-1 rounded text-[10px] font-mono transition-colors ${
+                    showGrid ? 'bg-[#1E293B] text-[#06B6D4]' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Toggle CAD Grid"
+                >
+                  <Grid className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowParticles((p) => !p)}
+                  className={`p-1 rounded text-[10px] font-mono transition-colors ${
+                    showParticles ? 'bg-[#1E293B] text-[#06B6D4]' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Toggle Fluid Particles"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scenario & Time-Scrubbing Control Panel sitting just below the main canvas */}
+            <ScenarioTimeScrubber
+              currentTime={simTime}
+              maxTime={maxRecordedTime}
+              isPlaying={isPlaying}
+              onTogglePlay={handleTogglePlay}
+              onStepForward={handleStepForward}
+              onScrubTime={handleScrubTime}
+              onResetTime={handleReset}
+              onJumpToLive={handleJumpToLive}
+              scenarios={WORKBENCH_SCENARIOS}
+              activeScenarioId={activeScenarioId}
+              onScenarioChange={handleScenarioChange}
+              isTransientActive={isTransientActive}
+              transientMessage={transientMessage}
+              transientMarkers={transientMarkers}
+              simSpeed={simSpeed}
+              onChangeSimSpeed={setSimSpeed}
             />
-
-            {/* Subtle Heads-Up Display (HUD) Overlays */}
-            {/* HUD Top-Left: Machine Telemetry */}
-            <div className="absolute top-2.5 left-2.5 pointer-events-none flex flex-col gap-0.5 bg-[#0F172A]/85 backdrop-blur-md border border-[#1E293B] px-2.5 py-1.5 rounded-md shadow-md">
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#06B6D4] animate-pulse" />
-                <span className="font-mono text-[11px] font-bold text-slate-100 tracking-wider">
-                  ASSET: P-101A [API 610 OH2]
-                </span>
-              </div>
-              <div className="text-[10px] font-mono text-slate-400">
-                TIP SPEED u<sub className="text-[8px]">2</sub>:{' '}
-                <span className="text-[#06B6D4] font-semibold">{tipSpeed.toFixed(1)} m/s</span> | LATENCY: 16.6ms
-              </div>
-            </div>
-
-            {/* HUD Top-Right: Real-time Status Badge */}
-            <div className="absolute top-2.5 right-2.5 flex items-center">
-              {isCavitating ? (
-                <div className="flex items-center gap-1.5 bg-[#F59E0B]/15 border border-[#F59E0B]/60 backdrop-blur-md px-2.5 py-1.5 rounded-md shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-pulse">
-                  <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B]" />
-                  <span className="font-mono text-[11px] font-bold text-[#F59E0B] tracking-wide">
-                    STATUS: CAVITATION (-{cavitationDeficit.toFixed(2)}m)
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 bg-[#06B6D4]/15 border border-[#06B6D4]/50 backdrop-blur-md px-2.5 py-1.5 rounded-md shadow-[0_0_12px_rgba(6,182,212,0.2)]">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#06B6D4]" />
-                  <span className="font-mono text-[11px] font-bold text-[#06B6D4] tracking-wide">
-                    STATUS: NOMINAL (BEP {Math.round(flowDeviation * 100)}%)
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* HUD Bottom-Left: Real-time Pressure & Margins */}
-            <div className="absolute bottom-2.5 left-2.5 pointer-events-none bg-[#0F172A]/85 backdrop-blur-md border border-[#1E293B] px-2.5 py-1.5 rounded-md shadow-md">
-              <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-mono">
-                <div>
-                  <span className="text-slate-400">NPSH<sub className="text-[8px]">a</sub>: </span>
-                  <span className={`font-bold ${isCavitating ? 'text-[#F59E0B]' : 'text-[#06B6D4]'}`}>
-                    {npsha.toFixed(2)} m
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400">NPSH<sub className="text-[8px]">r</sub>: </span>
-                  <span className="text-slate-200 font-bold">{npshr.toFixed(2)} m</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">MARGIN: </span>
-                  <span className={`font-bold ${npshMarginRatio < 1.0 ? 'text-[#F59E0B]' : 'text-emerald-400'}`}>
-                    {npshMarginRatio.toFixed(2)}x
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400">N<sub className="text-[8px]">ss</sub>: </span>
-                  <span className="text-slate-200 font-bold">{Math.round(nss).toLocaleString()} US</span>
-                </div>
-              </div>
-            </div>
-
-            {/* HUD Bottom-Right: Viewport & Overlay Toggles */}
-            <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 bg-[#0F172A]/85 backdrop-blur-md border border-[#1E293B] p-1 rounded-md shadow-md">
-              <button
-                type="button"
-                onClick={() => setShowGrid((g) => !g)}
-                className={`p-1 rounded text-[11px] font-mono transition-colors ${
-                  showGrid ? 'bg-[#1E293B] text-[#06B6D4]' : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Toggle CAD Grid"
-              >
-                <Grid className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowParticles((p) => !p)}
-                className={`p-1 rounded text-[11px] font-mono transition-colors ${
-                  showParticles ? 'bg-[#1E293B] text-[#06B6D4]' : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Toggle Fluid Particles"
-              >
-                <Zap className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
 
           {/* ------------------------------------------------------------- */}
@@ -919,6 +1159,11 @@ export const MissionControlWorkbench: React.FC<MissionControlWorkbenchProps> = (
       {/* SECTION 2: DIGITAL TWINS FLEET (GROUPED + SCHEMATICS + RIBBON) */}
       {/* ------------------------------------------------------------- */}
       <SimulatorFleetSection onLaunchSimulator={onLaunchSimulator} />
+
+      {/* ------------------------------------------------------------- */}
+      {/* SECTION 3: LIVESIMULATORS UNIVERSAL ENGINEERING FOOTER */}
+      {/* ------------------------------------------------------------- */}
+      <LiveSimulatorsFooter />
     </div>
   );
 };
