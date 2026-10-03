@@ -1,0 +1,105 @@
+# Plant Reliability Engineering Tools & Simulators
+> High-precision web simulators for plant, mechanical, and reliability engineers. Built to API, ISO, ASME, and Hydraulic Institute engineering standards.
+
+## Overview
+The Plant Reliability Simulation Suite provides deterministic, transparent, client-side engineering calculation modules for:
+1. Centrifugal Pump Cavitation & NPSH (API 610 12th Ed / ANSI-HI 9.6.1-2017)
+2. Rotor Unbalance & Bearing Life (ISO 1940-1:2003 / ISO 281:2007 / ISO 10816-3:2009)
+3. Pipe Thermal Expansion and Stress Visualizer (ASME B31.3:2022 Section 319 / ASME B36.10M)
+4. API Mechanical Seal Flush Plan Simulator (API Standard 682 4th Edition / ISO 21049)
+
+All modules execute real-time physics algorithms with dual SI (Metric) and US Customary unit conversions, interactive diagnostic curves, and step-by-step mathematical audits.
+
+---
+
+## 1. Centrifugal Pump Cavitation & NPSH Simulator
+- **URL Route**: `/#pump`
+- **Primary Goal**: Help plant engineers calculate Net Positive Suction Head Available (NPSHa), verify vendor NPSHr (NPSH3) margin ratios, calculate suction specific speed (Nss), and detect cavitation inception risk.
+- **Governing Standards**:
+  - API 610 12th Edition (Centrifugal Pumps for Petroleum, Petrochemical and Natural Gas Industries, §6.1.8, §6.1.11)
+  - ANSI / Hydraulic Institute 9.6.1-2017 (Rotodynamic Pumps - Guideline for NPSH Margin)
+  - ISO 5199 (Technical specifications for centrifugal pumps - Class II)
+- **Key Equations**:
+  - `NPSHa = (P_surface / (ρ · g)) + Z_s - h_f - (P_vap / (ρ · g))`
+  - `h_f = f · (L_eq / D) · (v² / (2 · g))` (Darcy-Weisbach / Colebrook-White solver)
+  - `Nss = (N · √Q) / (NPSHr)^0.75` (Suction Specific Speed)
+  - `Margin = NPSHa / NPSHr` (Threshold: ≥ 1.10x to 1.30x per HI 9.6.1)
+- **Inputs**: Process fluid (density & vapor pressure curve), flow rate Q, BEP flow rate, shaft speed N (RPM), static suction elevation Z_s, vessel surface pressure P_surface, suction line diameter & equivalent length, fluid temperature.
+- **Outputs**: NPSHa, NPSHr (NPSH3), NPSH Margin Ratio, Suction Specific Speed (Nss), Suction pipe bulk velocity, Cavitation risk index, Acoustic energy class.
+- **Limitations**: Assumes single-phase Newtonian liquid without entrained non-condensable gases. NPSHr reflects 3% head drop from water testing.
+
+---
+
+## 2. Rotor Unbalance and Bearing Life Simulator
+- **URL Route**: `/#rotor`
+- **Primary Goal**: Help rotating equipment engineers calculate ISO 1940 permissible residual unbalance, 1X synchronous dynamic unbalance force, orbit whirl kinematics, ISO 10816-3 vibration severity, and ISO 281 modified bearing fatigue life (L10mh).
+- **Governing Standards**:
+  - ISO 1940-1:2003 (Balance quality requirements for rotors in a constant rigid state)
+  - ISO 281:2007 (Rolling bearings - Dynamic load ratings and rating life)
+  - ISO 10816-3:2009 (Evaluation of machine vibration on non-rotating parts)
+  - API 610 12th Edition §6.9 (Bearings and bearing housings)
+- **Key Equations**:
+  - `U_per = (1000 · G · m_rotor) / ω = (9549 · G · m_rotor) / N`
+  - `Fc = (U_actual / 1000) · ω² = m_unbal · r · ω²`
+  - `L10h = (C / P)^p · (10⁶ / (60 · n))` [p = 3 for ball, 10/3 for roller]
+  - `L10mh = a1 · aISO · L10h` (Modified life with lubrication factor aISO)
+  - `κ = ν / ν1` (Lubrication viscosity ratio)
+- **Inputs**: Total rotor mass (kg/lb), shaft operating speed (RPM), ISO balance quality grade (G0.4 to G6.3), actual residual unbalance (g·mm / oz·in), bearing dynamic capacity C (kN), lubricant viscosity grade @ 40°C, operating bearing temp, contamination factor eC.
+- **Outputs**: Permissible unbalance U_per, 1X dynamic force Fc, RMS vibration velocity V_rms, ISO 10816-3 severity zone (A, B, C, D), Basic L10h life, ISO 281 modified L10mh life, viscosity ratio kappa.
+- **Limitations**: Rigid rotor assumption (N < 0.70 · N_crit). For long flexible shafts (L/D > 2.0), two-plane dynamic field balancing is required.
+
+---
+
+## 3. Pipe Thermal Expansion and Stress Visualizer
+- **URL Route**: `/#pipe`
+- **Primary Goal**: Help piping and mechanical engineers calculate thermal expansion elongation (ΔL), Kellogg guided cantilever flexibility, ASME B31.3 allowable displacement stress range (SA), combined von Mises / displacement stress (SE), and anchor reaction forces.
+- **Governing Standards**:
+  - ASME B31.3:2022 (Process Piping Code, Section 319 Piping Flexibility)
+  - ASME B36.10M / B36.19M (Welded and Seamless Wrought Steel Pipe Dimensions)
+  - API 610 12th Edition Annex F (Allowable pump nozzle forces and moments)
+- **Key Equations**:
+  - `ΔL = α(T) · L · (T_op - T_install)`
+  - `SE = √(Sb² + 4 · St²)` (Displacement stress range with SIF i-factors)
+  - `SA = f · [1.25 · Sc + 0.25 · Sh + (Sh - SL)]` (ASME allowable limit)
+  - `F_anchor = E · A_metal · α · ΔT` (Fully restrained compressive thrust)
+  - `σ_bend = (3 · E · D_o · ΔL) / L_flex²` (Kellogg guided cantilever)
+- **Inputs**: Pipe material (ASTM A106 Gr. B, ASTM A312 TP316, ASTM A335 P11/P22, Custom), Nominal Pipe Size (NPS 1/2" to 36") & Schedule (Sch 10 to 160/XXS), pipe length L, operating temperature, installation ambient temperature, internal pressure, anchor condition (Anchored, Cantilever, Expansion Loop).
+- **Outputs**: Linear thermal growth ΔL, Direct axial stress, Displacement stress SE, ASME B31.3 allowable stress SA, Stress utilization ratio (SE / SA), Compressive anchor reaction force, Expansion loop stress reduction factor.
+- **Limitations**: Evaluates 1D/2D cantilever and loop geometry; does not replace 3D finite element piping stress software (CAESAR II / AutoPIPE) for complex multi-plane process systems.
+
+---
+
+## 4. API Mechanical Seal Flush Plan Simulator
+- **URL Route**: `/#seal`
+- **Primary Goal**: Help rotating equipment and reliability engineers simulate API 682 auxiliary flush piping arrangements (Plans 11, 13, 21, 23, 31, 32, 52, 53A, 53B, 53C, 54, 62), calculate frictional face heat generation, size restriction orifices, compute seal chamber temperature rise, and verify vapor pressure suppression margins.
+- **Governing Standards**:
+  - API Standard 682 4th Edition / ISO 21049 (Shaft Sealing Systems for Centrifugal and Rotary Pumps)
+  - API 610 12th Edition §6.8 (Mechanical Shaft Seals)
+- **Key Equations**:
+  - `Q_face = f_fric · P_net · A_face · V_mean` (Frictional heat in kW)
+  - `Q_req = Q_face / (ρ · Cp · ΔT_allowed)` (Required flush flow for ΔT ≤ 5°C)
+  - `Q_ro = Cd · A_orifice · √(2 · ΔP / ρ)` (Restriction orifice flow delivery)
+  - `ΔP_vap = P_box - P_vap(T_box)` (Vapor suppression margin ≥ 200 kPa)
+- **Inputs**: API 682 flush plan selection (11 to 62), process fluid properties (specific heat Cp, density, vapor pressure), shaft balance diameter, shaft rotational speed N (RPM), seal chamber pressure P_box, pump discharge pressure P_disch, restriction orifice diameter, seal face material combination.
+- **Outputs**: Frictional face heat power (kW), required flush flow rate, actual orifice flow rate delivery, seal chamber operating temperature, seal chamber vapor suppression margin (kPa / °C), Plan operational status & risk assessment.
+- **Limitations**: Clean single-phase liquid assumption; slurries mandate Plan 31 (cyclone) or Plan 32 (external flush). Plan 53A barrier fluid pressure must be maintained 1.4-2.0 bar above seal chamber pressure.
+
+---
+
+## Site Pages & Directory
+- Home Dashboard: `/#home` (Interactive overview, feature matrix, quick launcher)
+- Pump Cavitation & NPSH Simulator: `/#pump`
+- Rotor Unbalance & Bearing Life Simulator: `/#rotor`
+- Pipe Thermal Expansion & Stress Visualizer: `/#pipe`
+- API Mechanical Seal Flush Plan Simulator: `/#seal`
+- Calculation Methodology & Physics: `/#methodology`
+- Governing Standards Reference: `/#standards`
+- Engineering FAQ & Knowledge Base: `/#faq`
+- Disclaimer & Terms: `/#disclaimer`
+
+---
+
+## Technical Architecture & Ethics
+- **Client-Side Physics**: Deterministic computations run entirely in-browser using standard IEEE 754 double-precision arithmetic. No proprietary server lock-in.
+- **No Exaggerated Claims**: Tools are engineered for preliminary scoping, technical screening, and engineering education.
+- **Professional Review Notice**: All calculations must be validated against certified OEM data and stamped by a licensed Professional Engineer (PE / Chartered Engineer) prior to equipment procurement or physical plant modification.

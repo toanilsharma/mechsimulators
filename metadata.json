@@ -1,0 +1,6 @@
+{
+  "name": "Mechanical Lab Pro",
+  "description": "Industrial rotating machinery and piping reliability suite featuring 11 physics-validated digital twin simulators for pumps, compressors, turbines, gearboxes, bearings, seals, piping, and rotor alignment. Educational and engineering analysis platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
