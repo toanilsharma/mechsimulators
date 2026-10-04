@@ -19,7 +19,7 @@ const BASE_URL = 'https://mech.livesimulators.com';
 const META_CONFIG: Record<RouteId, PageMeta> = {
   home: {
     title: 'Mechanical Engineering Digital Twins | LiveSimulators',
-    description: 'Physics-verified mechanical engineering simulators conforming to API, ASME, AGMA, and ISO standards. Centrifugal pumps, compressors, turbines, gearboxes, bearings, and rotor dynamics.',
+    description: 'Interactive mechanical engineering simulators referencing API, ASME, AGMA, and ISO methodologies. Centrifugal pumps, compressors, turbines, gearboxes, and rotor dynamics.',
     keywords: 'livesimulators, mechanical simulators, digital twins, turbomachinery, pump cavitation API 610, compressor surge API 617, recip compressor API 618, gearbox AGMA 2001, steam turbine API 612, bearing life ISO 281, journal bearing API 684, rotor balancing ISO 1940, pipe stress ASME B31.3, seal flush API 682, shaft alignment API 686',
     canonicalUrl: `${BASE_URL}/`,
     ogType: 'website',
@@ -171,6 +171,58 @@ const META_CONFIG: Record<RouteId, PageMeta> = {
   },
 };
 
+interface SimulatorSchemaInfo {
+  name: string;
+  standard: string;
+}
+
+const SIMULATOR_SCHEMAS: Record<string, SimulatorSchemaInfo> = {
+  pump: {
+    name: 'Centrifugal Pump Cavitation and NPSH Analysis',
+    standard: 'API 610 and HI 9.6.1',
+  },
+  compressor: {
+    name: 'Centrifugal Compressor Surge Dynamics and Anti-Surge Control',
+    standard: 'API 617 and ASME PTC 10',
+  },
+  recip: {
+    name: 'Reciprocating Compressor Cylinder PV Cycle and Rod Load Reversal',
+    standard: 'API 618 and ISO 13631',
+  },
+  gearbox: {
+    name: 'Industrial Gearbox Mesh Dynamics and Tooth Safety Factors',
+    standard: 'AGMA 2001 and ISO 6336',
+  },
+  turbine: {
+    name: 'Industrial Steam Turbine Thermodynamic Expansion and Enthalpy Drop',
+    standard: 'API 612 and ASME PTC 6',
+  },
+  bearing: {
+    name: 'Rolling Element Bearing Fault Diagnostics and L10 Rating Life',
+    standard: 'ISO 281 and ISO 10816',
+  },
+  journal: {
+    name: 'Hydrodynamic Journal Bearing Lubrication and Oil Whirl Instability',
+    standard: 'API 684 and DIN 31652',
+  },
+  rotor: {
+    name: 'Rotor Dynamics and Resonant Unbalance Balancing',
+    standard: 'ISO 1940 and API 684',
+  },
+  pipe: {
+    name: 'Process Piping Thermal Flexibility and Expansion Stress',
+    standard: 'ASME B31.3',
+  },
+  seal: {
+    name: 'Mechanical Seal Flush Piping Plans and Temperature Rise',
+    standard: 'API 682 4th Edition',
+  },
+  alignment: {
+    name: 'Shaft Laser Alignment and Thermal Growth Compensation',
+    standard: 'API 686 and ANSI/ASA S2.75',
+  },
+};
+
 export const SEO: React.FC<SEOProps> = ({ activeRoute }) => {
   const meta = META_CONFIG[activeRoute] || META_CONFIG.home;
 
@@ -229,106 +281,110 @@ export const SEO: React.FC<SEOProps> = ({ activeRoute }) => {
     }
 
     // 4. JSON-LD Structured Data
-    const jsonLdData: any[] = [
-      // Organization schema on all pages
-      {
-        '@context': 'https://schema.org',
-        '@type': 'Organization',
-        'name': 'LiveSimulators',
-        'url': 'https://livesimulators.com',
-        'sameAs': [
-          'https://mech.livesimulators.com',
-          'https://designcalculators.co.in',
-        ],
-      },
-    ];
+    const jsonLdData: any[] = [];
 
-    // WebSite schema on homepage
+    // 1. Homepage: Organization and WebSite schema
     if (activeRoute === 'home') {
-      jsonLdData.push({
-        '@context': 'https://schema.org',
-        '@type': 'WebSite',
-        'name': 'LiveSimulators Mechanical',
-        'url': 'https://mech.livesimulators.com',
-      });
-    }
+      jsonLdData.push(
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          'name': 'LiveSimulators',
+          'url': 'https://livesimulators.com',
+          'sameAs': [
+            'https://mech.livesimulators.com',
+            'https://designcalculators.co.in',
+          ],
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          'name': 'LiveSimulators Mechanical',
+          'url': 'https://mech.livesimulators.com',
+        }
+      );
+    } else if (SIMULATOR_SCHEMAS[activeRoute]) {
+      // 2. Simulator Pages: WebApplication & BreadcrumbList
+      const sim = SIMULATOR_SCHEMAS[activeRoute];
+      const pageUrl = `${BASE_URL}/${activeRoute}`;
 
-    jsonLdData.push(
-      {
-        '@context': 'https://schema.org',
-        '@type': ['SoftwareApplication', 'LearningResource'],
-        '@id': `${meta.canonicalUrl}#app`,
-        'name': meta.title,
-        'alternateName': 'LiveSimulators Mechanical Engineering Lab',
-        'applicationCategory': 'EducationalApplication',
-        'operatingSystem': 'Any web browser',
-        'browserRequirements': 'Requires JavaScript. Requires HTML5 Canvas.',
-        'educationalLevel': 'Higher Education',
-        'learningResourceType': 'Simulation',
-        'audience': {
-          '@type': 'EducationalAudience',
-          'educationalRole': 'student',
-          'audienceType': 'Undergraduate Engineers, EPC Machinery Consultants, Reliability Engineers',
-        },
-        'url': meta.canonicalUrl,
-        'description': meta.description,
-        'author': {
-          '@type': 'Person',
-          'name': 'Anil Sharma',
-        },
-        'offers': {
-          '@type': 'Offer',
-          'price': '0',
-          'priceCurrency': 'USD',
-          'availability': 'https://schema.org/InStock',
-        },
-        'teaches': [
-          'Euler Turbomachinery Equation',
-          'Net Positive Suction Head Available (NPSHa)',
-          'Net Positive Suction Head Required (NPSHr)',
-          'Rayleigh-Plesset Bubble Dynamics',
-          'Cavitation Damage & Impeller Pitting',
-          'Suction Specific Speed (Nss)',
-          'API 610 12th Edition Centrifugal Pumps',
-          'API 617 Centrifugal Compressor Surge Line & Polytropic Head',
-          'API 618 Reciprocating Compressor Cylinder PV & Rod Load Dynamics',
-          'API 612 Multi-Stage Steam Turbine Isentropic Expansion & Willans Line',
-          'AGMA 2001 / ISO 6336 Industrial Gearbox Mesh & Safety Factors',
-          'ISO 281 / ISO 10816 Rolling Element Bearing Fault Kinematics',
-          'API 684 Hydrodynamic Journal Bearing 2D Reynolds PDE & Oil Whirl',
-          'ISO 1940-1 Grade G2.5 Rotor Unbalance & Resonant Balancing',
-          'ASME B31.3 Process Piping Thermal Flexibility & Stress Range',
-          'API 682 4th Ed Mechanical Seal Flush Plan Thermodynamics',
-          'API 686 Reverse Dial & Laser Shaft Alignment Calculations',
-          'Hydraulic Institute HI 9.6.1 Margin Standards',
-          'Affinity Laws for Turbomachinery Speed Scaling',
-        ],
-      },
-      {
-        '@context': 'https://schema.org',
-        '@type': 'BreadcrumbList',
-        'itemListElement': [
-          {
-            '@type': 'ListItem',
-            'position': 1,
-            'name': 'LiveSimulators Home',
-            'item': 'https://livesimulators.com/',
+      jsonLdData.push(
+        {
+          '@context': 'https://schema.org',
+          '@type': 'WebApplication',
+          'name': `${sim.name} | LiveSimulators`,
+          'url': pageUrl,
+          'applicationCategory': 'EngineeringApplication',
+          'operatingSystem': 'Web Browser',
+          'browserRequirements': 'Requires JavaScript. Requires HTML5 Canvas.',
+          'description': `Interactive simulator referencing ${sim.standard} methodologies for ${sim.name}.`,
+          'offers': {
+            '@type': 'Offer',
+            'price': '0',
+            'priceCurrency': 'USD',
           },
-          {
-            '@type': 'ListItem',
-            'position': 2,
-            'name': 'Mechanical Department',
-            'item': `${BASE_URL}/`,
+          'provider': {
+            '@type': 'Organization',
+            'name': 'LiveSimulators',
+            'url': 'https://livesimulators.com',
+            'sameAs': [
+              'https://mech.livesimulators.com',
+              'https://designcalculators.co.in',
+            ],
           },
-          {
-            '@type': 'ListItem',
-            'position': 3,
-            'name': meta.heading,
-            'item': meta.canonicalUrl,
-          },
-        ],
-      }
-    );
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          'itemListElement': [
+            {
+              '@type': 'ListItem',
+              'position': 1,
+              'name': 'LiveSimulators Mechanical',
+              'item': `${BASE_URL}/`,
+            },
+            {
+              '@type': 'ListItem',
+              'position': 2,
+              'name': sim.name,
+              'item': pageUrl,
+            },
+          ],
+        }
+      );
+    } else {
+      // 3. Other resource pages (portal, workbench, standards, methodology, faq, about, disclaimer)
+      jsonLdData.push(
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          'name': 'LiveSimulators',
+          'url': 'https://livesimulators.com',
+          'sameAs': [
+            'https://mech.livesimulators.com',
+            'https://designcalculators.co.in',
+          ],
+        },
+        {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          'itemListElement': [
+            {
+              '@type': 'ListItem',
+              'position': 1,
+              'name': 'LiveSimulators Mechanical',
+              'item': `${BASE_URL}/`,
+            },
+            {
+              '@type': 'ListItem',
+              'position': 2,
+              'name': meta.heading,
+              'item': meta.canonicalUrl,
+            },
+          ],
+        }
+      );
+    }
 
     let scriptTag = document.getElementById('jsonld-seo') as HTMLScriptElement | null;
     if (!scriptTag) {

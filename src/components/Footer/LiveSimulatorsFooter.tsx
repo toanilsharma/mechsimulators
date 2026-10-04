@@ -367,6 +367,9 @@ export const LiveSimulatorsFooter: React.FC<LiveSimulatorsFooterProps> = ({
 
         {/* Section: Legal & Standards Reference Notice (Spans full width without artificial max-w clamping) */}
         <div className="pt-6 border-t border-slate-900 text-[11px] text-slate-500 font-sans leading-relaxed w-full space-y-2">
+          <p className="text-[11px] text-slate-400 leading-normal">
+            Disclaimer: LiveSimulators Mechanical is an independent educational platform. We are not affiliated with, endorsed by, or certified by API, ASME, AGMA, ISO, or any other standards-issuing body. Standard designations are used strictly for nominative reference to publicly available engineering methodologies.
+          </p>
           <p>
             LiveSimulators provides interactive engineering learning experiences and conceptual visualizations.
             Simulations are intended for education and exploration; users should consult applicable standards,

@@ -4,11 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Mechanical Engineering Digital Twins | LiveSimulators</title>
-    <meta name="description" content="Physics-verified mechanical engineering simulators conforming to API, ASME, AGMA, and ISO standards. Centrifugal pumps, compressors, turbines, gearboxes, bearings, and rotor dynamics." />
+    <meta name="description" content="Interactive mechanical engineering simulators referencing API, ASME, AGMA, and ISO methodologies. Centrifugal pumps, compressors, turbines, gearboxes, and rotor dynamics." />
     <meta name="keywords" content="livesimulators, mechanical simulators, digital twins, turbomachinery simulator, pump cavitation API 610, compressor surge API 617, steam turbine API 612, reciprocating compressor API 618, gearbox AGMA 2001, bearing fault ISO 281, journal bearing oil whirl API 684, rotor balancing ISO 1940, pipe stress ASME B31.3, mechanical seal flush API 682, shaft alignment API 686" />
     <meta name="theme-color" content="#050B14" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <link rel="canonical" href="https://mech.livesimulators.com/" />
+    <script>
+      (function() {
+        try {
+          var cleanPath = window.location.pathname.replace(/^\/+|\/+$/g, '');
+          var canonicalTag = document.querySelector('link[rel="canonical"]');
+          if (canonicalTag && cleanPath) {
+            canonicalTag.setAttribute('href', 'https://mech.livesimulators.com/' + cleanPath);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="help" type="text/plain" href="/llms.txt" title="LLM Documentation" />
 
     <!-- Google tag (gtag.js) for livesimulators.com -->
@@ -25,7 +36,7 @@
     <!-- Open Graph / Social Sharing -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Mechanical Engineering Digital Twins | LiveSimulators" />
-    <meta property="og:description" content="Physics-verified mechanical engineering simulators conforming to API, ASME, AGMA, and ISO standards. Centrifugal pumps, compressors, turbines, gearboxes, bearings, and rotor dynamics." />
+    <meta property="og:description" content="Interactive mechanical engineering simulators referencing API, ASME, AGMA, and ISO methodologies. Centrifugal pumps, compressors, turbines, gearboxes, and rotor dynamics." />
     <meta property="og:site_name" content="LiveSimulators Mechanical" />
     <meta property="og:url" content="https://mech.livesimulators.com/" />
     <meta property="og:image" content="https://livesimulators.com/og-mechanical.png" />
@@ -33,7 +44,7 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Mechanical Engineering Digital Twins | LiveSimulators" />
-    <meta name="twitter:description" content="Physics-verified mechanical engineering simulators conforming to API, ASME, AGMA, and ISO standards. Centrifugal pumps, compressors, turbines, gearboxes, bearings, and rotor dynamics." />
+    <meta name="twitter:description" content="Interactive mechanical engineering simulators referencing API, ASME, AGMA, and ISO methodologies. Centrifugal pumps, compressors, turbines, gearboxes, and rotor dynamics." />
     <meta name="twitter:image" content="https://livesimulators.com/og-mechanical.png" />
 
     <!-- Organization Schema (JSON-LD) -->
@@ -60,56 +71,6 @@
       }
     </script>
 
-    <!-- SoftwareApplication / LearningResource Schema (JSON-LD) -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": ["SoftwareApplication", "LearningResource"],
-        "@id": "https://mech.livesimulators.com/#app",
-        "url": "https://mech.livesimulators.com/",
-        "name": "Mechanical Engineering Digital Twins",
-        "alternateName": "LiveSimulators Mechanical Engineering Lab",
-        "applicationCategory": "EducationalApplication",
-        "operatingSystem": "Any web browser",
-        "browserRequirements": "Requires JavaScript. Requires HTML5 Canvas.",
-        "educationalLevel": "Higher Education",
-        "learningResourceType": "Simulation",
-        "audience": {
-          "@type": "EducationalAudience",
-          "educationalRole": "student",
-          "audienceType": "Undergraduate Engineers, EPC Machinery Consultants, Reliability Engineers"
-        },
-        "description": "Comprehensive browser-based digital twins for rotating machinery, turbomachinery, fluid mechanics, tribology, and process piping adhering to API, ISO, ASME, and AGMA standards.",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD",
-          "availability": "https://schema.org/InStock"
-        },
-        "teaches": [
-          "Euler Turbomachinery Equation",
-          "Net Positive Suction Head Available (NPSHa)",
-          "Net Positive Suction Head Required (NPSHr)",
-          "Rayleigh-Plesset Bubble Dynamics",
-          "Cavitation Damage & Impeller Pitting",
-          "Suction Specific Speed (Nss)",
-          "API 610 12th Edition Centrifugal Pumps",
-          "API 617 Centrifugal Compressor Surge Line & Polytropic Head",
-          "API 618 Reciprocating Compressor Cylinder PV & Rod Load Dynamics",
-          "API 612 Multi-Stage Steam Turbine Isentropic Expansion & Willans Line",
-          "AGMA 2001 / ISO 6336 Industrial Gearbox Mesh & Safety Factors",
-          "ISO 281 / ISO 10816 Rolling Element Bearing Fault Kinematics",
-          "API 684 Hydrodynamic Journal Bearing 2D Reynolds PDE & Oil Whirl",
-          "ISO 1940-1 Grade G2.5 Rotor Unbalance & Resonant Balancing",
-          "ASME B31.3 Process Piping Thermal Flexibility & Stress Range",
-          "API 682 4th Ed Mechanical Seal Flush Plan Thermodynamics",
-          "API 686 Reverse Dial & Laser Shaft Alignment Calculations",
-          "Hydraulic Institute HI 9.6.1 Margin Standards",
-          "Affinity Laws for Turbomachinery Speed Scaling"
-        ]
-      }
-    </script>
-
     <!-- Google Fonts: Inter, JetBrains Mono, Chakra Petch, Plus Jakarta Sans, IBM Plex Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -118,6 +79,11 @@
   </head>
   <body class="bg-[#050B14] text-slate-100 antialiased selection:bg-cyan-500/25 selection:text-cyan-200 min-h-screen overflow-x-hidden font-sans">
     <div id="root"></div>
+    <noscript>
+      <footer style="padding: 24px; font-size: 11px; color: #94a3b8; background-color: #040812; border-top: 1px solid #1e293b; font-family: sans-serif; line-height: 1.5;">
+        <p>Disclaimer: LiveSimulators Mechanical is an independent educational platform. We are not affiliated with, endorsed by, or certified by API, ASME, AGMA, ISO, or any other standards-issuing body. Standard designations are used strictly for nominative reference to publicly available engineering methodologies.</p>
+      </footer>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

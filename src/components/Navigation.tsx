@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { RouteId, SimulatorId } from '../types/common';
 import { useApp } from '../context/AppContext';
 import { machineryAcoustics } from '../utils/machineryAcoustics';
@@ -35,6 +35,10 @@ import {
   Sliders,
   Radio,
   ArrowRight,
+  Calculator,
+  BarChart3,
+  SlidersHorizontal,
+  Zap,
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -44,6 +48,8 @@ interface NavigationProps {
   onOpenCommandPalette?: () => void;
   onResetDefaults?: () => void;
 }
+
+type DropdownKey = 'classes' | 'domains' | 'labs' | 'studios' | 'ecosystem' | null;
 
 export const Navigation: React.FC<NavigationProps> = ({
   onOpenAudit,
@@ -74,36 +80,60 @@ export const Navigation: React.FC<NavigationProps> = ({
     setIsComparatorOpen,
   } = useApp();
 
-  // Dropdown states
-  const [isDisciplinesOpen, setIsDisciplinesOpen] = useState(false);
-  const [isLabsOpen, setIsLabsOpen] = useState(false);
-  const [isToolsOpen, setIsToolsOpen] = useState(false);
+  // Active mega dropdown state
+  const [activeDropdown, setActiveDropdown] = useState<DropdownKey>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Audio FX state matching parent website
   const [isFxMuted, setIsFxMuted] = useState<boolean>(machineryAcoustics.getIsMuted());
   const [fxVolume, setFxVolume] = useState<number>(machineryAcoustics.getVolume());
   const [showVolumeSlider, setShowVolumeSlider] = useState<boolean>(false);
 
-  const disciplinesRef = useRef<HTMLDivElement>(null);
-  const labsRef = useRef<HTMLDivElement>(null);
-  const toolsRef = useRef<HTMLDivElement>(null);
+  // Smooth hover open / close management
+  const handleMouseEnterNav = (key: DropdownKey) => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setActiveDropdown(key);
+  };
 
-  // Close dropdowns on outside click
+  const handleMouseLeaveNav = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
+    closeTimeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 180);
+  };
+
+  const handleDropdownContentEnter = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
+  const handleDropdownContentLeave = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
+    closeTimeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 180);
+  };
+
+  // Close on ESC key or outside click
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (disciplinesRef.current && !disciplinesRef.current.contains(e.target as Node)) {
-        setIsDisciplinesOpen(false);
-      }
-      if (labsRef.current && !labsRef.current.contains(e.target as Node)) {
-        setIsLabsOpen(false);
-      }
-      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) {
-        setIsToolsOpen(false);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveDropdown(null);
+        setIsMobileMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleToggleFx = () => {
@@ -121,515 +151,1288 @@ export const Navigation: React.FC<NavigationProps> = ({
     }
   };
 
-  const disciplines = [
-    { name: 'Electrical Engineering', code: 'EE-200', href: 'https://livesimulators.com/department/electrical', desc: 'Circuits, RF Lines, 3-Phase Grids' },
-    { name: 'Mechanical Systems', code: 'ME-400', href: 'https://mech.livesimulators.com', desc: 'Vibrations, Gears, Cycles & Turbomachinery', isCurrent: true },
-    { name: 'Control & Signals', code: 'CS-300', href: 'https://livesimulators.com/department/control', desc: 'PID Tuning, Bode, Nyquist & Root Locus' },
-    { name: 'Chemical & Process', code: 'CH-250', href: 'https://livesimulators.com/department/chemical', desc: 'CSTR Kinetics, Distillation, Exchangers' },
-    { name: 'Civil & Structural', code: 'CE-320', href: 'https://livesimulators.com/department/civil', desc: 'Beam Bending, Trusses & Seismic Drift' },
-    { name: 'Quantum & Physics', code: 'PH-500', href: 'https://livesimulators.com/department/physics', desc: 'P-N Band Bending, SiC MOSFETs, Photoelectric' },
-  ];
+  const navigateAndClose = (route: RouteId | SimulatorId) => {
+    setActiveRoute(route as any);
+    setActiveDropdown(null);
+    setIsMobileMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-  const parentLabs = [
-    { name: 'Power Electronics Lab', href: 'https://livesimulators.com/lab/power-electronics-lab', desc: '8 Switching Topologies & PWM' },
-    { name: 'Power Systems Lab', href: 'https://livesimulators.com/lab/power-systems-lab', desc: '25 Grid Flow & Swing Stability Solvers' },
-    { name: 'SafeOps UPS Lab', href: 'https://livesimulators.com/lab/safeops-ups', desc: 'Double-Conversion & Static Bypass' },
-    { name: 'ElectroLive Electrical Safety', href: 'https://livesimulators.com/lab/electrolive-electrical-safety', desc: 'NFPA 70E Arc Flash Boundary' },
-    { name: 'Mechanical Reliability Lab', href: '#', isCurrent: true, desc: '11 Digital Twins • Turbomachinery' },
-  ];
-
-  const primarySimulators: {
+  // 11 Simulators metadata
+  const simulatorsList: {
     id: SimulatorId;
     name: string;
     shortName: string;
-    icon: React.ElementType;
     standard: string;
+    category: string;
+    desc: string;
+    icon: React.ElementType;
   }[] = [
     {
       id: 'pump',
       name: 'Pump Cavitation & NPSH',
       shortName: 'Pump NPSH',
-      icon: Activity,
       standard: 'API 610',
+      category: 'Turbomachinery',
+      desc: 'NPSHa vs NPSHr margin, bubble collapse & impeller pitting.',
+      icon: Activity,
     },
     {
       id: 'compressor',
-      name: 'Centrifugal Compressor Surge',
+      name: 'Compressor Surge Dynamics',
       shortName: 'Compressor Surge',
-      icon: Wind,
       standard: 'API 617',
-    },
-    {
-      id: 'recip',
-      name: 'Reciprocating Compressor PV & Pulsation',
-      shortName: 'Recip PV',
-      icon: Cpu,
-      standard: 'API 618',
-    },
-    {
-      id: 'gearbox',
-      name: 'Industrial Gearbox & Gear Mesh Diagnostics',
-      shortName: 'Gearbox Mesh',
-      icon: Cog,
-      standard: 'AGMA 2001',
+      category: 'Turbomachinery',
+      desc: 'SLL / SCL safety limits, ASV modulation & flow reversal.',
+      icon: Wind,
     },
     {
       id: 'turbine',
-      name: 'Steam Turbine Thermodynamics & Dynamics',
+      name: 'Steam Turbine Thermodynamics',
       shortName: 'Steam Turbine',
-      icon: Flame,
       standard: 'API 612',
+      category: 'Turbomachinery',
+      desc: 'Mollier isentropic expansion, Willans line & blade erosion.',
+      icon: Flame,
     },
     {
       id: 'bearing',
-      name: 'Rolling Element Bearing Faults',
+      name: 'Bearing Fault Vibration',
       shortName: 'Bearing Faults',
-      icon: Disc,
       standard: 'ISO 281',
+      category: 'Vibration & Dynamics',
+      desc: 'BPFO, BPFI, BSF, FTF ball pass frequencies & L10 rating life.',
+      icon: Disc,
     },
     {
       id: 'journal',
-      name: 'Hydrodynamic Journal Bearings & Whirl',
+      name: 'Journal Bearing Oil Whirl',
       shortName: 'Journal Bearing',
-      icon: Compass,
       standard: 'API 684',
+      category: 'Vibration & Dynamics',
+      desc: '2D Reynolds lubrication, Sommerfeld number & whip stability.',
+      icon: Compass,
     },
     {
       id: 'rotor',
-      name: 'Rotor Dynamics & Bearings',
-      shortName: 'Rotor Dynamics',
-      icon: RotateCw,
+      name: 'Rotor Resonant Balancing',
+      shortName: 'Rotor Balancing',
       standard: 'ISO 1940',
+      category: 'Vibration & Dynamics',
+      desc: 'Grade G2.5 permissible unbalance & 1X centrifugal forces.',
+      icon: RotateCw,
     },
     {
-      id: 'pipe',
-      name: 'Pipe Thermal Stress',
-      shortName: 'Pipe Stress',
-      icon: Maximize2,
-      standard: 'ASME B31.3',
-    },
-    {
-      id: 'seal',
-      name: 'API 682 Seal Flush',
-      shortName: 'Seal Flush',
-      icon: ShieldCheck,
-      standard: 'API 682',
+      id: 'gearbox',
+      name: 'Gearbox Mesh & Safety',
+      shortName: 'Gearbox Mesh',
+      standard: 'AGMA 2001',
+      category: 'Drivetrain',
+      desc: 'Gear mesh frequencies (GMF), bending & contact pitting safety.',
+      icon: Cog,
     },
     {
       id: 'alignment',
-      name: 'Shaft Alignment & Coupling',
-      shortName: 'Shaft Alignment',
-      icon: Target,
+      name: 'Shaft Laser Alignment',
+      shortName: 'Laser Alignment',
       standard: 'API 686',
+      category: 'Drivetrain',
+      desc: 'Cold offset compensation, thermal growth & shim corrections.',
+      icon: Target,
+    },
+    {
+      id: 'pipe',
+      name: 'Piping Thermal Stress',
+      shortName: 'Pipe Stress',
+      standard: 'ASME B31.3',
+      category: 'Piping & Pressure',
+      desc: 'Thermal flexibility, displacement stress range & anchor loads.',
+      icon: Maximize2,
+    },
+    {
+      id: 'seal',
+      name: 'Mechanical Seal Flush',
+      shortName: 'Seal Flush',
+      standard: 'API 682',
+      category: 'Piping & Pressure',
+      desc: 'Piping Plans 11-62, face heat dissipation & vapor margin.',
+      icon: ShieldCheck,
+    },
+    {
+      id: 'recip',
+      name: 'Reciprocating Compressor PV',
+      shortName: 'Recip Compressor',
+      standard: 'API 618',
+      category: 'Reciprocating',
+      desc: 'Cylinder indicator PV card, rod load reversal & pulsation.',
+      icon: Cpu,
     },
   ];
 
+  const parentDisciplines = [
+    { name: 'Electrical Engineering', code: 'EE-200', href: 'https://livesimulators.com/department/electrical', desc: 'Circuits, RF Transmission, 3-Phase Grids' },
+    { name: 'Mechanical Systems', code: 'ME-400', href: 'https://mech.livesimulators.com', desc: 'Turbomachinery, Vibrations, Bearings & Piping', isCurrent: true },
+    { name: 'Control & Signals', code: 'CS-300', href: 'https://livesimulators.com/department/control', desc: 'PID Loop Tuning, Bode, Nyquist & Root Locus' },
+    { name: 'Chemical & Process', code: 'CH-250', href: 'https://livesimulators.com/department/chemical', desc: 'CSTR Kinetics, Distillation & Heat Exchangers' },
+    { name: 'Civil & Structural', code: 'CE-320', href: 'https://livesimulators.com/department/civil', desc: 'Beam Shear, Trusses & Earthquake Drift' },
+    { name: 'Quantum & Physics', code: 'PH-500', href: 'https://livesimulators.com/department/physics', desc: 'Semiconductors, Band Gaps & Photoelectric' },
+  ];
+
   return (
-    <header
-      id="app-header"
-      className="sticky top-0 h-[54px] min-h-[54px] max-h-[54px] bg-[#0A1222]/95 backdrop-blur-xl border-b border-[#1E3A5F]/80 shadow-[0_4px_24px_rgba(0,0,0,0.7),0_1px_0_rgba(6,182,212,0.15)] text-slate-200 px-3 sm:px-5 md:px-6 lg:px-8 flex items-center justify-between gap-2 select-none shrink-0 z-40 pt-safe pl-safe pr-safe font-sans relative"
-    >
-      {/* Top subtle cyber-accent edge highlight line */}
-      <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-500/70 to-transparent pointer-events-none" />
-
-      {/* 1. Exact Parent Brand & Department Pill */}
-      <div className="flex items-center gap-3 shrink-0">
-        <button
-          onClick={() => {
-            setActiveRoute('home');
-            setIsMobileMenuOpen(false);
-          }}
-          className="flex items-center gap-2 group cursor-pointer text-left"
-          title="Go to LiveSimulators Mechanical Home"
-        >
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.18)] group-hover:scale-105 transition-transform shrink-0">
-            <Sparkles className="w-4 h-4 text-cyan-400" />
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-base sm:text-lg font-bold text-white tracking-tight">
-              LiveSimulators<span className="text-cyan-400">.com</span>
-            </span>
-            <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-950/80 border border-cyan-500/40 text-cyan-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-              MECH LAB
-            </span>
-          </div>
-        </button>
-
-        {/* Disciplines Dropdown */}
-        <div className="relative hidden xl:block" ref={disciplinesRef}>
-          <button
-            onClick={() => setIsDisciplinesOpen(!isDisciplinesOpen)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 transition-colors cursor-pointer"
-          >
-            <span>Disciplines</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isDisciplinesOpen ? 'rotate-180 text-cyan-400' : ''}`} />
-          </button>
-
-          {isDisciplinesOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-64 bg-[#0d1322] border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider px-2 py-1 border-b border-slate-800">
-                LiveSimulators Departments
-              </div>
-              <div className="mt-1 space-y-1">
-                {disciplines.map((d) => (
-                  <a
-                    key={d.code}
-                    href={d.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`block px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-                      d.isCurrent
-                        ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/40'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">{d.name}</span>
-                      <span className="text-[9px] font-mono text-cyan-400">{d.code}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 truncate">{d.desc}</div>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
+    <div className="w-full select-none z-50 sticky top-0 font-sans" onMouseLeave={handleMouseLeaveNav}>
+      {/* ========================================================
+          1. TOP NOTIFICATION RIBBON (Matches mathtimelab.netlify.app)
+          ======================================================== */}
+      <div className="w-full bg-[#050A14] border-b border-[#142238] py-1 px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-400">
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-slate-300 font-semibold uppercase tracking-wider text-[10px]">
+            API • ASME • AGMA • ISO Referencing
+          </span>
+          <span className="text-slate-600 hidden md:inline">|</span>
+          <span className="hidden md:inline text-slate-400">11 Physics-Verified Digital Twins</span>
+          <span className="text-slate-600 hidden lg:inline">|</span>
+          <span className="hidden lg:inline text-cyan-400 font-medium">Zero Sign-Up • 100% Free Open Educational Access</span>
         </div>
-
-        {/* Specialized Labs Dropdown */}
-        <div className="relative hidden xl:block" ref={labsRef}>
+        <div className="flex items-center gap-3 text-[10px]">
+          <span className="text-emerald-400 font-bold hidden sm:inline">FLOAT64 ODE SOLVER</span>
+          <span className="text-slate-600 hidden sm:inline">|</span>
+          <span className="text-slate-300 hidden md:inline">11 LABS ACTIVE</span>
+          <span className="text-slate-600 hidden md:inline">|</span>
           <button
-            onClick={() => setIsLabsOpen(!isLabsOpen)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 transition-colors cursor-pointer"
+            onClick={() => navigateAndClose('standards')}
+            className="text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer transition-colors"
           >
-            <span>Labs</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isLabsOpen ? 'rotate-180 text-cyan-400' : ''}`} />
+            Standards &amp; Codes &rarr;
           </button>
-
-          {isLabsOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-64 bg-[#0d1322] border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider px-2 py-1 border-b border-slate-800">
-                Interactive Engineering Labs
-              </div>
-              <div className="mt-1 space-y-1">
-                {parentLabs.map((lab, i) => (
-                  <a
-                    key={i}
-                    href={lab.href}
-                    target={lab.isCurrent ? undefined : '_blank'}
-                    rel={lab.isCurrent ? undefined : 'noopener noreferrer'}
-                    onClick={(e) => {
-                      if (lab.isCurrent) {
-                        e.preventDefault();
-                        setActiveRoute('home');
-                        setIsLabsOpen(false);
-                      }
-                    }}
-                    className={`block px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-                      lab.isCurrent
-                        ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/40'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">{lab.name}</span>
-                      {lab.isCurrent ? (
-                        <span className="text-[9px] font-mono px-1 py-0.2 bg-cyan-500/20 text-cyan-300 rounded">Active</span>
-                      ) : (
-                        <ExternalLink className="w-2.5 h-2.5 text-slate-400" />
-                      )}
-                    </div>
-                    <div className="text-[10px] text-slate-400 truncate">{lab.desc}</div>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
+          <span className="text-slate-600">|</span>
+          <span className="inline-flex items-center gap-1 text-emerald-400 font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            LIVE
+          </span>
         </div>
       </div>
 
-      {/* 2. Simulator Cockpit Tabs */}
-      <nav className="flex items-center gap-1 bg-[#0f172a]/80 p-0.5 rounded-lg border border-slate-800/90 overflow-x-auto max-w-[50vw] sm:max-w-none custom-scrollbar">
-        {/* Home / Directory Landing Button */}
-        <button
-          onClick={() => setActiveRoute('home')}
-          className={`flex items-center gap-1.5 px-2.5 py-1 min-h-[30px] rounded-md text-xs font-mono transition-all whitespace-nowrap touch-manipulation cursor-pointer ${
-            activeRoute === 'home' || activeRoute === 'portal'
-              ? 'bg-cyan-400 text-slate-950 font-bold shadow-sm shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-          }`}
-          title="Mechanical Simulators Directory"
-        >
-          <Globe size={13} className={activeRoute === 'home' || activeRoute === 'portal' ? 'text-slate-950' : 'text-cyan-400'} />
-          <span>Home</span>
-        </button>
+      {/* ========================================================
+          2. MAIN HEADER BAR (Premium Dark Obsidian Theme)
+          ======================================================== */}
+      <header
+        id="app-header"
+        className="h-[58px] min-h-[58px] bg-[#070D1A]/95 backdrop-blur-xl border-b border-[#1A2E4C] text-slate-200 px-3 sm:px-5 md:px-6 lg:px-8 flex items-center justify-between gap-3 shadow-[0_4px_30px_rgba(0,0,0,0.85)] relative z-40"
+      >
+        {/* Brand Logo & MECH LAB Pill Badge linking to parent website */}
+        <div className="flex items-center gap-3 shrink-0">
+          <a
+            href="https://livesimulators.com"
+            className="flex items-center gap-2.5 group cursor-pointer text-left no-underline"
+            title="Return to parent website LiveSimulators.com"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/10 border border-cyan-500/50 flex items-center justify-center text-cyan-400 shadow-[0_0_18px_rgba(6,182,212,0.25)] group-hover:scale-105 group-hover:border-cyan-400 transition-all shrink-0">
+              <Sparkles className="w-4.5 h-4.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-display text-lg font-bold text-white tracking-tight">
+                LiveSimulators<span className="text-cyan-400">.com</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)] tracking-wider">
+                MECH LAB
+              </span>
+            </div>
+          </a>
+        </div>
 
-        {/* Mission Control Workbench Button */}
-        <button
-          onClick={() => setActiveRoute('workbench')}
-          className={`flex items-center gap-1.5 px-2.5 py-1 min-h-[30px] rounded-md text-xs font-mono transition-all whitespace-nowrap touch-manipulation cursor-pointer ${
-            activeRoute === 'workbench'
-              ? 'bg-cyan-400 text-slate-950 font-bold shadow-sm shadow-cyan-500/25'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-          }`}
-          title="Mission Control Simulator Workbench"
-        >
-          <Sliders size={13} className={activeRoute === 'workbench' ? 'text-slate-950' : 'text-cyan-400'} />
-          <span>Workbench</span>
-        </button>
+        {/* Center Mega-Dropdown Navigation Triggers (Hover-Activated) */}
+        <nav className="hidden lg:flex items-center gap-1.5">
+          {/* Dropdown 1: Equipment Classes */}
+          <button
+            onMouseEnter={() => handleMouseEnterNav('classes')}
+            onClick={() => setActiveDropdown(activeDropdown === 'classes' ? null : 'classes')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-display tracking-wide transition-all cursor-pointer border ${
+              activeDropdown === 'classes'
+                ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Equipment Classes</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${activeDropdown === 'classes' ? 'rotate-180 text-cyan-400' : ''}`} />
+          </button>
 
-        {primarySimulators.map((sim) => {
-          const Icon = sim.icon;
-          const isActive = activeRoute === sim.id;
-          return (
+          {/* Dropdown 2: Engineering Domains */}
+          <button
+            onMouseEnter={() => handleMouseEnterNav('domains')}
+            onClick={() => setActiveDropdown(activeDropdown === 'domains' ? null : 'domains')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-display tracking-wide transition-all cursor-pointer border ${
+              activeDropdown === 'domains'
+                ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Engineering Domains</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${activeDropdown === 'domains' ? 'rotate-180 text-emerald-400' : ''}`} />
+          </button>
+
+          {/* Dropdown 3: All 11 Digital Twins (strictly 2 lines: All 11 / Digital Twins) */}
+          <button
+            onMouseEnter={() => handleMouseEnterNav('labs')}
+            onClick={() => setActiveDropdown(activeDropdown === 'labs' ? null : 'labs')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold font-display tracking-wide transition-all cursor-pointer border shrink-0 ${
+              activeDropdown === 'labs'
+                ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <div className="flex flex-col text-left leading-none">
+              <span className="text-[10px] font-mono font-bold text-cyan-400 whitespace-nowrap">All 11</span>
+              <span className="text-xs font-semibold whitespace-nowrap text-slate-200 mt-0.5">Digital Twins</span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${activeDropdown === 'labs' ? 'rotate-180 text-sky-400' : ''}`} />
+          </button>
+
+          {/* Dropdown 4: Studios & Verification */}
+          <button
+            onMouseEnter={() => handleMouseEnterNav('studios')}
+            onClick={() => setActiveDropdown(activeDropdown === 'studios' ? null : 'studios')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-display tracking-wide transition-all cursor-pointer border ${
+              activeDropdown === 'studios'
+                ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5 text-amber-400" />
+            <span>Studios &amp; Tools</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${activeDropdown === 'studios' ? 'rotate-180 text-amber-400' : ''}`} />
+          </button>
+
+          {/* Dropdown 5: Ecosystem & Portals */}
+          <button
+            onMouseEnter={() => handleMouseEnterNav('ecosystem')}
+            onClick={() => setActiveDropdown(activeDropdown === 'ecosystem' ? null : 'ecosystem')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold font-display tracking-wide transition-all cursor-pointer border ${
+              activeDropdown === 'ecosystem'
+                ? 'bg-cyan-500/15 border-cyan-500 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                : 'border-transparent text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5 text-purple-400" />
+            <span>Ecosystem</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${activeDropdown === 'ecosystem' ? 'rotate-180 text-purple-400' : ''}`} />
+          </button>
+
+          {/* Direct Link: Mission Control */}
+          <button
+            onClick={() => navigateAndClose('workbench')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold font-display tracking-wide transition-all cursor-pointer ${
+              activeRoute === 'workbench'
+                ? 'bg-cyan-400 text-slate-950 font-bold shadow-md shadow-cyan-500/25'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <span>Workbench</span>
+          </button>
+        </nav>
+
+        {/* Right Utility Cluster: Search, Audio FX, Units & CTA */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Search Button (Triggers Command Palette) */}
+          {onOpenCommandPalette && (
             <button
-              key={sim.id}
-              onClick={() => setActiveRoute(sim.id)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 min-h-[30px] rounded-md text-xs font-mono transition-all whitespace-nowrap touch-manipulation cursor-pointer ${
-                isActive
-                  ? 'bg-cyan-400 text-slate-950 font-bold shadow-sm shadow-cyan-500/25'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
+              onClick={onOpenCommandPalette}
+              title="Search all 11 simulators (Ctrl+K or /)"
+              id="nav-search-btn"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700/80 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-mono transition-all group cursor-pointer shadow-inner"
             >
-              <Icon size={13} className={isActive ? 'text-slate-950' : 'text-cyan-400'} />
-              <span className="hidden sm:inline">{sim.shortName}</span>
-              <span className="sm:hidden">{sim.shortName.split(' ')[0]}</span>
-              <span
-                className={`text-[9px] px-1 py-0.2 rounded font-mono hidden xl:inline ${
-                  isActive ? 'bg-slate-950/20 text-slate-950 font-bold' : 'bg-slate-900 text-slate-400'
-                }`}
-              >
-                {sim.standard}
+              <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+              <span className="hidden xl:inline text-slate-300 font-sans">Search 11 Digital Twins...</span>
+              <span className="xl:hidden hidden sm:inline text-slate-400">Search</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[10px] text-cyan-400 bg-slate-950 border border-slate-700 rounded font-mono font-bold">
+                Ctrl+K
+              </kbd>
+            </button>
+          )}
+
+          {/* Audio FX Acoustics Toggle with Volume Popover on Hover */}
+          <div
+            className="relative"
+            onMouseEnter={() => setShowVolumeSlider(true)}
+            onMouseLeave={() => setShowVolumeSlider(false)}
+          >
+            <button
+              onClick={handleToggleFx}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all text-xs font-mono group cursor-pointer ${
+                isFxMuted
+                  ? 'border-slate-800 bg-slate-900/60 text-slate-500 hover:text-slate-300 hover:border-slate-700'
+                  : 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.2)]'
+              }`}
+              title={isFxMuted ? 'Unmute physics sound effects' : 'Mute physics sound effects'}
+              aria-label={isFxMuted ? 'Unmute audio' : 'Mute audio'}
+            >
+              {isFxMuted ? (
+                <VolumeX className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-400" />
+              ) : (
+                <Volume2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              )}
+              <span className="hidden 2xl:inline text-[10px] font-bold">
+                {isFxMuted ? 'FX OFF' : 'FX ON'}
               </span>
             </button>
-          );
-        })}
-      </nav>
 
-      {/* 3. Right Utility Cluster Matching livesimulators.com */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {/* Audio FX Toggle (Exact match to livesimulators.com) */}
-        <div
-          className="relative"
-          onMouseEnter={() => setShowVolumeSlider(true)}
-          onMouseLeave={() => setShowVolumeSlider(false)}
-        >
-          <button
-            onClick={handleToggleFx}
-            className={`flex items-center gap-1.5 px-2.5 py-1 min-h-[30px] rounded-lg border transition-all text-xs font-mono group cursor-pointer ${
-              isFxMuted
-                ? 'border-slate-800 bg-slate-900/60 text-slate-500 hover:text-slate-300 hover:border-slate-700'
-                : 'border-cyan-500/50 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.2)]'
-            }`}
-            title={isFxMuted ? 'Unmute physics sound effects' : 'Mute physics sound effects'}
-            aria-label={isFxMuted ? 'Unmute audio' : 'Mute audio'}
-            id="nav-audio-toggle-btn"
-          >
-            {isFxMuted ? (
-              <VolumeX className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-400" />
-            ) : (
-              <Volume2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            {showVolumeSlider && (
+              <div className="absolute top-full mt-1 right-0 w-44 bg-[#0A111F] border border-slate-700 p-2.5 rounded-xl shadow-2xl z-50 text-xs font-mono space-y-1.5 animate-in fade-in duration-100">
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Sound FX Volume</span>
+                  <span className="text-cyan-400 font-bold">{(fxVolume * 100).toFixed(0)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={fxVolume}
+                  onChange={handleVolumeChange}
+                  className="w-full h-1.5 bg-slate-900 rounded accent-cyan-400 cursor-pointer"
+                />
+                <div className="text-[9px] text-slate-500 pt-1 border-t border-slate-800">
+                  Cavitation &amp; shaft acoustics
+                </div>
+              </div>
             )}
-            <span className="hidden md:inline text-[11px] font-bold">
-              {isFxMuted ? 'FX OFF' : 'FX ON'}
-            </span>
-          </button>
-
-          {/* Volume Slider Popover on Hover */}
-          {showVolumeSlider && (
-            <div className="absolute top-full mt-1 right-0 w-44 bg-[#0d1322] border border-slate-700 p-2.5 rounded-xl shadow-2xl z-50 text-xs font-mono space-y-1.5">
-              <div className="flex justify-between text-[10px] text-slate-400">
-                <span>Sound FX Volume</span>
-                <span className="text-cyan-400 font-bold">{(fxVolume * 100).toFixed(0)}%</span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={fxVolume}
-                onChange={handleVolumeChange}
-                className="w-full h-1.5 bg-slate-900 rounded accent-cyan-400 cursor-pointer"
-              />
-              <div className="text-[9px] text-slate-500 pt-1 border-t border-slate-800">
-                Vapor collapse & 1X shaft harmonics
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Search Command Palette Trigger (Cmd+K or /) */}
-        {onOpenCommandPalette && (
-          <button
-            onClick={onOpenCommandPalette}
-            title="Search all simulators (Ctrl+K or /)"
-            id="nav-search-btn"
-            className="flex items-center gap-2 px-2.5 sm:px-3 py-1 min-h-[30px] rounded-lg border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-mono transition-all group cursor-pointer"
-          >
-            <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
-            <span className="hidden sm:inline">Search</span>
-            <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[10px] text-slate-400 bg-slate-800 border border-slate-700 rounded font-mono">
-              /
-            </kbd>
-          </button>
-        )}
-
-        {/* Guided Learning Mode Toggle */}
-        <button
-          onClick={toggleLearningMode}
-          title={
-            isLearningMode
-              ? 'Guided Learning Mode Active (Click to switch to Expert Mode)'
-              : 'Click to enable Guided Learning Mode'
-          }
-          className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 min-h-[30px] rounded-lg text-xs font-mono transition-colors cursor-pointer border ${
-            isLearningMode
-              ? 'bg-amber-950/80 border-amber-500/60 text-amber-300 font-bold shadow-sm'
-              : 'bg-slate-900/80 hover:bg-slate-800 border-slate-700/80 text-slate-400 hover:text-white'
-          }`}
-        >
-          <GraduationCap size={13} className={isLearningMode ? 'text-amber-400' : 'text-slate-400'} />
-          <span className="text-[11px]">{isLearningMode ? 'Guide: ON' : 'Guide: OFF'}</span>
-        </button>
-
-        {/* Advanced Engineering Tools Dropdown */}
-        <div className="relative hidden md:block" ref={toolsRef}>
-          <button
-            onClick={() => setIsToolsOpen(!isToolsOpen)}
-            className="flex items-center gap-1.5 px-2.5 py-1 min-h-[30px] rounded-lg border border-slate-700/80 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-mono transition-all cursor-pointer"
-            title="Advanced Engineering Studios & Calculators"
-          >
-            <Sliders size={13} className="text-cyan-400" />
-            <span className="hidden lg:inline text-[11px]">Studios</span>
-            <ChevronDown size={12} className={`text-slate-400 transition-transform ${isToolsOpen ? 'rotate-180 text-cyan-400' : ''}`} />
-          </button>
-
-          {isToolsOpen && (
-            <div className="absolute top-full right-0 mt-1.5 w-72 bg-[#0d1322] border border-slate-700/80 rounded-xl shadow-2xl p-2.5 z-50 text-xs font-mono space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider px-2 py-0.5 border-b border-slate-800">
-                Engineering Verification & Studios
-              </div>
-              <div className="grid grid-cols-2 gap-1 pt-1">
-                <button
-                  onClick={() => { onOpenAudit(); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <FileText size={13} className="text-cyan-400 shrink-0" />
-                  <span className="text-[11px]">Audit Trail</span>
-                </button>
-                <button
-                  onClick={() => { onOpenReport(); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <FileText size={13} className="text-emerald-400 shrink-0" />
-                  <span className="text-[11px]">Print Report</span>
-                </button>
-                <button
-                  onClick={() => { setIsDiagnosticModalOpen(true); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <Wrench size={13} className="text-amber-400 shrink-0" />
-                  <span className="text-[11px]">Diagnostics</span>
-                </button>
-                <button
-                  onClick={() => { setIsCaseStudiesModalOpen(true); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <BookOpen size={13} className="text-rose-400 shrink-0" />
-                  <span className="text-[11px]">Case Studies</span>
-                </button>
-                <button
-                  onClick={() => { setIsReliabilityStudioOpen(true); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <TrendingUp size={13} className="text-emerald-400 shrink-0" />
-                  <span className="text-[11px]">Reliability β</span>
-                </button>
-                <button
-                  onClick={() => { setIsMachineryTrainStudioOpen(true); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <Network size={13} className="text-blue-400 shrink-0" />
-                  <span className="text-[11px]">Train Cascade</span>
-                </button>
-                <button
-                  onClick={() => { setIsSpectralLabOpen(true); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <Activity size={13} className="text-indigo-400 shrink-0" />
-                  <span className="text-[11px]">Spectral Lab</span>
-                </button>
-                <button
-                  onClick={() => { setIsFleetMatrixOpen(true); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <Layers size={13} className="text-teal-400 shrink-0" />
-                  <span className="text-[11px]">Fleet Matrix</span>
-                </button>
-                <button
-                  onClick={() => { setIsRcaStudioOpen(true); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <Wrench size={13} className="text-amber-400 shrink-0" />
-                  <span className="text-[11px]">RCA 5-Whys</span>
-                </button>
-                <button
-                  onClick={() => { setIsKineticCutawayOpen(true); setIsToolsOpen(false); }}
-                  className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-slate-800 text-left text-slate-300 hover:text-white transition-colors cursor-pointer"
-                >
-                  <Disc size={13} className="text-sky-400 shrink-0" />
-                  <span className="text-[11px]">3D Cutaway</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Explore Simulators CTA (Matches livesimulators.com button) */}
-        <button
-          onClick={() => setActiveRoute('home')}
-          className="hidden sm:flex items-center gap-1.5 px-3.5 py-1 min-h-[30px] text-xs font-bold text-slate-950 bg-cyan-400 hover:bg-cyan-300 active:bg-cyan-500 rounded-lg transition-all shadow-[0_0_20px_rgba(6,182,212,0.25)] hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] font-display shrink-0 cursor-pointer"
-          id="nav-explore-simulators-cta"
-        >
-          <span>Explore Simulators</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-
-        {/* Mobile menu hamburger */}
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="lg:hidden w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white rounded-lg border border-slate-800 bg-slate-900 active:bg-slate-800 cursor-pointer"
-          aria-label="Toggle navigation"
-          id="mobile-menu-toggle"
-        >
-          {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-        </button>
-      </div>
-
-      {/* Mobile Drawer Menu */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden absolute top-[52px] left-0 right-0 border-b border-slate-800 bg-[#080d17] px-4 pt-3 pb-6 space-y-4 font-sans shadow-2xl max-h-[85vh] overflow-y-auto z-50 animate-in slide-in-from-top-2 duration-200">
-          <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
-            All 11 Mechanical Simulators
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-            {primarySimulators.map((sim) => (
+
+          {/* Explore Simulators CTA Button */}
+          <button
+            onClick={() => navigateAndClose('home')}
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-cyan-300 hover:from-cyan-300 hover:to-cyan-200 active:from-cyan-500 active:to-cyan-400 rounded-lg transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] font-display shrink-0 cursor-pointer"
+          >
+            <span>Explore 11 Simulators</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Mobile Menu Hamburger */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden w-9 h-9 flex items-center justify-center text-slate-300 hover:text-white rounded-lg border border-slate-800 bg-slate-900 active:bg-slate-800 cursor-pointer"
+            aria-label="Toggle Navigation Menu"
+          >
+            {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+        </div>
+      </header>
+
+      {/* ========================================================
+          3. COMPACT MEGA DROPDOWN PANELS (Smart, Small & Cardless)
+          Refined header sub-section matching mathtimelab.netlify.app
+          ======================================================== */}
+      {activeDropdown && (
+        <div
+          onMouseEnter={handleDropdownContentEnter}
+          onMouseLeave={handleDropdownContentLeave}
+          className="w-full bg-white text-slate-900 border-b border-slate-300 shadow-[0_15px_40px_-10px_rgba(0,0,0,0.35)] animate-in fade-in slide-in-from-top-1 duration-150 relative z-50 font-sans"
+        >
+          {/* Top Divider Cyan Laser Strip */}
+          <div className="w-full h-[2px] bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-500" />
+
+          {/* Ultra-Thin Header Banner */}
+          <div className="border-b border-slate-200 bg-slate-50/90 px-6 sm:px-10 lg:px-12 py-1.5 flex items-center justify-between text-[11px] font-mono">
+            <div className="flex items-center gap-2.5">
+              <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px]">
+                {activeDropdown === 'classes' && 'Equipment Classes & Governing Standards'}
+                {activeDropdown === 'domains' && 'Subject Domains & Engineering Branches'}
+                {activeDropdown === 'labs' && 'All 11 Mechanical Digital Twin Simulators'}
+                {activeDropdown === 'studios' && 'Engineering Studios & Verification Tools'}
+                {activeDropdown === 'ecosystem' && 'LiveSimulators Multi-Department Ecosystem'}
+              </span>
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-cyan-100 text-cyan-800 border border-cyan-300">
+                {activeDropdown === 'classes' && 'API • ASME • AGMA • ISO'}
+                {activeDropdown === 'domains' && '6 Engineering Branches'}
+                {activeDropdown === 'labs' && '11 Models'}
+                {activeDropdown === 'studios' && 'Audit Ready'}
+                {activeDropdown === 'ecosystem' && 'Companion Portals'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-slate-500 text-[10px]">
+              <span className="hidden md:inline font-sans text-slate-500">
+                Click any model to launch instantly
+              </span>
+              <span className="px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-mono font-medium">
+                ESC to close
+              </span>
+            </div>
+          </div>
+
+          {/* ========================================================
+              PANEL 1: EQUIPMENT CLASSES (5 Clean, Cardless Columns)
+              ======================================================== */}
+          {activeDropdown === 'classes' && (
+            <div className="px-6 sm:px-10 lg:px-12 py-3.5 max-w-[1720px] mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                {/* Column 1: Turbomachinery */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-bold text-cyan-700 uppercase tracking-wider">
+                      Turbomachinery
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">3 Models</span>
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('pump')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-cyan-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-cyan-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Pump Cavitation &amp; NPSH
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">API 610</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('compressor')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-cyan-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-cyan-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Compressor Surge Dynamics
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">API 617</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('turbine')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-cyan-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-cyan-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Steam Turbine Enthalpy
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">API 612</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => navigateAndClose('pump')}
+                    className="text-[11px] font-semibold text-cyan-600 hover:text-cyan-800 flex items-center gap-1 pt-1 group cursor-pointer"
+                  >
+                    <span>Explore Turbomachinery</span>
+                    <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Column 2: Vibration & Bearings */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-bold text-blue-700 uppercase tracking-wider">
+                      Vibration &amp; Bearings
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">3 Models</span>
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('bearing')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-blue-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-blue-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Bearing Fault Vibration
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">ISO 281</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('journal')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-blue-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-blue-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Journal Bearing Oil Whirl
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">API 684</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('rotor')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-blue-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-blue-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Rotor Resonant Balancing
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">ISO 1940</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => navigateAndClose('rotor')}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 pt-1 group cursor-pointer"
+                  >
+                    <span>Explore Vibration</span>
+                    <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Column 3: Drivetrain */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-bold text-amber-700 uppercase tracking-wider">
+                      Drivetrain &amp; Gearing
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">2 Models</span>
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('gearbox')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-amber-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-amber-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Gearbox Mesh &amp; AGMA
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">AGMA 2001</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('alignment')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-amber-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-amber-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Shaft Laser Alignment
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">API 686</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => navigateAndClose('gearbox')}
+                    className="text-[11px] font-semibold text-amber-600 hover:text-amber-800 flex items-center gap-1 pt-1 group cursor-pointer"
+                  >
+                    <span>Explore Drivetrain</span>
+                    <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Column 4: Piping & Seals */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-bold text-emerald-700 uppercase tracking-wider">
+                      Piping &amp; Pressure
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">2 Models</span>
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('pipe')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-emerald-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-emerald-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Piping Thermal Stress
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">ASME B31.3</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('seal')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-emerald-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-emerald-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Mechanical Seal Flush
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">API 682</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => navigateAndClose('pipe')}
+                    className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 pt-1 group cursor-pointer"
+                  >
+                    <span>Explore Piping</span>
+                    <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Column 5: Reciprocating */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-bold text-rose-700 uppercase tracking-wider">
+                      Reciprocating
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">1 Model</span>
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('recip')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-rose-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-rose-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Reciprocating PV Cycle
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 ml-1">API 618</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => navigateAndClose('recip')}
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1 pt-1 group cursor-pointer"
+                  >
+                    <span>Explore Recip</span>
+                    <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================
+              PANEL 2: ENGINEERING DOMAINS (6 Clean, Cardless Columns)
+              ======================================================== */}
+          {activeDropdown === 'domains' && (
+            <div className="px-6 sm:px-10 lg:px-12 py-3.5 max-w-[1720px] mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-5">
+                {/* Domain 1: Fluid Dynamics */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200">
+                    <Activity className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                    <span className="font-bold text-xs text-slate-900 truncate">Fluid Dynamics</span>
+                  </div>
+                  <div className="text-[10px] font-mono text-cyan-700">API 610 • HI 9.6.1</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('pump')}
+                        className="w-full text-left text-slate-700 hover:text-cyan-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Pump Cavitation NPSH
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('pump')}
+                        className="w-full text-left text-slate-500 hover:text-cyan-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Suction Velocity Limits
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Domain 2: Aerodynamics */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200">
+                    <Wind className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                    <span className="font-bold text-xs text-slate-900 truncate">Aerodynamics</span>
+                  </div>
+                  <div className="text-[10px] font-mono text-sky-700">API 617 • PTC 10</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('compressor')}
+                        className="w-full text-left text-slate-700 hover:text-sky-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Compressor Surge SLL
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('compressor')}
+                        className="w-full text-left text-slate-500 hover:text-sky-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • ASV Control Margins
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Domain 3: Thermodynamics */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200">
+                    <Flame className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span className="font-bold text-xs text-slate-900 truncate">Thermodynamics</span>
+                  </div>
+                  <div className="text-[10px] font-mono text-rose-700">API 612 • API 618</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('turbine')}
+                        className="w-full text-left text-slate-700 hover:text-rose-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Steam Turbine Enthalpy
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('recip')}
+                        className="w-full text-left text-slate-500 hover:text-rose-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Reciprocating PV Cycle
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Domain 4: Rotordynamics */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200">
+                    <RotateCw className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <span className="font-bold text-xs text-slate-900 truncate">Rotordynamics</span>
+                  </div>
+                  <div className="text-[10px] font-mono text-indigo-700">ISO 1940 • API 684</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('rotor')}
+                        className="w-full text-left text-slate-700 hover:text-indigo-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Rotor Balancing G2.5
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('journal')}
+                        className="w-full text-left text-slate-500 hover:text-indigo-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Hydrodynamic Oil Whirl
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Domain 5: Tribology */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200">
+                    <Disc className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="font-bold text-xs text-slate-900 truncate">Tribology</span>
+                  </div>
+                  <div className="text-[10px] font-mono text-emerald-700">ISO 281 • AGMA 2001</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('bearing')}
+                        className="w-full text-left text-slate-700 hover:text-emerald-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Bearing Fault Vibration
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('gearbox')}
+                        className="w-full text-left text-slate-500 hover:text-emerald-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Gearbox Mesh Diagnostics
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Domain 6: Stress & Alignment */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200">
+                    <Maximize2 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                    <span className="font-bold text-xs text-slate-900 truncate">Stress &amp; Alignment</span>
+                  </div>
+                  <div className="text-[10px] font-mono text-purple-700">ASME B31.3 • API 686</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('pipe')}
+                        className="w-full text-left text-slate-700 hover:text-purple-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Piping Thermal Stress
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('alignment')}
+                        className="w-full text-left text-slate-500 hover:text-purple-700 transition-colors py-0.5 cursor-pointer truncate"
+                      >
+                        • Shaft Laser Alignment
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================
+              PANEL 3: ALL 11 DIGITAL TWINS (Smart, Compact 4 Columns, Cardless)
+              ======================================================== */}
+          {activeDropdown === 'labs' && (
+            <div className="px-6 sm:px-10 lg:px-12 py-3.5 max-w-[1720px] mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Column 1: Turbomachinery */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-bold text-cyan-700 uppercase tracking-wider">
+                      Turbomachinery
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">3 Models</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">Centrifugal pumps, compressors &amp; steam turbines</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('pump')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-cyan-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-cyan-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Pump Cavitation &amp; NPSH
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-cyan-700 ml-1">API 610</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('compressor')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-cyan-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-cyan-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Compressor Surge Dynamics
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-cyan-700 ml-1">API 617</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('turbine')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-cyan-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-cyan-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Steam Turbine Enthalpy
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-cyan-700 ml-1">API 612</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => navigateAndClose('pump')}
+                    className="text-[11px] font-semibold text-cyan-600 hover:text-cyan-800 flex items-center gap-1 pt-1 group cursor-pointer"
+                  >
+                    <span>Explore Turbomachinery</span>
+                    <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Column 2: Vibration & Bearings */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-bold text-blue-700 uppercase tracking-wider">
+                      Vibration &amp; Dynamics
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">3 Models</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">Demodulation, oil whirl &amp; dynamic balancing</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('bearing')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-blue-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-blue-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Bearing Fault Vibration
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-blue-700 ml-1">ISO 281</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('journal')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-blue-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-blue-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Journal Bearing Oil Whirl
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-blue-700 ml-1">API 684</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('rotor')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-blue-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-blue-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Rotor Resonant Balancing
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-blue-700 ml-1">ISO 1940</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => navigateAndClose('bearing')}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 pt-1 group cursor-pointer"
+                  >
+                    <span>Explore Vibration Labs</span>
+                    <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Column 3: Drivetrain & Piping */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-bold text-amber-700 uppercase tracking-wider">
+                      Drivetrain &amp; Piping
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">3 Models</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">Contact pitting, alignment &amp; pipe flexibility</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('gearbox')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-amber-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-amber-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Gearbox Mesh &amp; AGMA
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-amber-700 ml-1">AGMA 2001</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('alignment')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-amber-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-amber-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Shaft Laser Alignment
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-amber-700 ml-1">API 686</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('pipe')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-amber-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-amber-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Piping Thermal Stress
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-amber-700 ml-1">ASME B31.3</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => navigateAndClose('gearbox')}
+                    className="text-[11px] font-semibold text-amber-600 hover:text-amber-800 flex items-center gap-1 pt-1 group cursor-pointer"
+                  >
+                    <span>Explore Drivetrain</span>
+                    <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Column 4: Seals & Reciprocating */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                    <span className="text-[10px] font-mono font-bold text-emerald-700 uppercase tracking-wider">
+                      Seals &amp; Recip
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-400">2 Models</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">Piping Plan 11-52 flush &amp; cylinder PV work</div>
+                  <ul className="space-y-1 text-xs pt-0.5">
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('seal')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-emerald-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-emerald-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Mechanical Seal Flush
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-emerald-700 ml-1">API 682</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('recip')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-emerald-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-slate-800 group-hover:text-emerald-600 font-medium group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          • Reciprocating PV Cycle
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover:text-emerald-700 ml-1">API 618</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('workbench')}
+                        className="w-full text-left flex items-center justify-between group py-0.5 hover:text-cyan-700 transition-colors cursor-pointer"
+                      >
+                        <span className="text-cyan-700 group-hover:text-cyan-900 font-bold group-hover:translate-x-0.5 transition-all text-xs truncate">
+                          ★ Mission Control Workbench
+                        </span>
+                        <span className="text-[9px] font-mono text-cyan-600 font-bold ml-1">11-IN-1</span>
+                      </button>
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => navigateAndClose('seal')}
+                    className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 pt-1 group cursor-pointer"
+                  >
+                    <span>Explore Reliability Systems</span>
+                    <ArrowRight className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================
+              PANEL 4: STUDIOS & TOOLS (Smart, Compact 4-Column List)
+              ZERO BULKY SUB-CARDS!
+              ======================================================== */}
+          {activeDropdown === 'studios' && (
+            <div className="px-6 sm:px-10 lg:px-12 py-3.5 max-w-[1720px] mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Column 1: Auditing */}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-mono font-bold text-slate-800 uppercase tracking-wider pb-1 border-b border-slate-200">
+                    Auditing &amp; Reports
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <button
+                        onClick={() => { onOpenAudit(); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-cyan-700 transition-colors cursor-pointer"
+                      >
+                        <FileText size={13} className="text-cyan-600 shrink-0" />
+                        <span className="font-medium">Calculation Audit Trail</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => { onOpenReport(); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-emerald-700 transition-colors cursor-pointer"
+                      >
+                        <FileText size={13} className="text-emerald-600 shrink-0" />
+                        <span className="font-medium">Print Assessment Report</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => navigateAndClose('standards')}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-blue-700 transition-colors cursor-pointer"
+                      >
+                        <ShieldCheck size={13} className="text-blue-600 shrink-0" />
+                        <span className="font-medium">Governing Standards Reference</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Column 2: Troubleshooting */}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-mono font-bold text-slate-800 uppercase tracking-wider pb-1 border-b border-slate-200">
+                    Troubleshooting &amp; RCA
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <button
+                        onClick={() => { setIsDiagnosticModalOpen(true); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-amber-700 transition-colors cursor-pointer"
+                      >
+                        <Wrench size={13} className="text-amber-600 shrink-0" />
+                        <span className="font-medium">Diagnostic Wizard</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => { setIsCaseStudiesModalOpen(true); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-rose-700 transition-colors cursor-pointer"
+                      >
+                        <BookOpen size={13} className="text-rose-600 shrink-0" />
+                        <span className="font-medium">Industrial Case Studies</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => { setIsRcaStudioOpen(true); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-indigo-700 transition-colors cursor-pointer"
+                      >
+                        <Target size={13} className="text-indigo-600 shrink-0" />
+                        <span className="font-medium">RCA 5-Whys Studio</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Column 3: Dynamic Visualizers */}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-mono font-bold text-slate-800 uppercase tracking-wider pb-1 border-b border-slate-200">
+                    Dynamic Machinery Visualizers
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <button
+                        onClick={() => { setIsKineticCutawayOpen(true); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-cyan-700 transition-colors cursor-pointer"
+                      >
+                        <Disc size={13} className="text-cyan-600 shrink-0" />
+                        <span className="font-medium">3D Kinetic Cutaway</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => { setIsSpectralLabOpen(true); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-violet-700 transition-colors cursor-pointer"
+                      >
+                        <Activity size={13} className="text-violet-600 shrink-0" />
+                        <span className="font-medium">Spectral FFT Lab</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => { setIsMachineryTrainStudioOpen(true); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-blue-700 transition-colors cursor-pointer"
+                      >
+                        <Network size={13} className="text-blue-600 shrink-0" />
+                        <span className="font-medium">Machinery Train Studio</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Column 4: Reliability & Analytics */}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-mono font-bold text-slate-800 uppercase tracking-wider pb-1 border-b border-slate-200">
+                    Reliability &amp; Analytics
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      <button
+                        onClick={() => { setIsReliabilityStudioOpen(true); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-emerald-700 transition-colors cursor-pointer"
+                      >
+                        <TrendingUp size={13} className="text-emerald-600 shrink-0" />
+                        <span className="font-medium">Reliability Studio (Weibull &beta;)</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => { setIsMonteCarloOpen(true); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-purple-700 transition-colors cursor-pointer"
+                      >
+                        <SlidersHorizontal size={13} className="text-purple-600 shrink-0" />
+                        <span className="font-medium">Monte Carlo Uncertainty</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => { setIsExergyCarbonOpen(true); setActiveDropdown(null); }}
+                        className="w-full text-left flex items-center gap-2 py-1 px-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-teal-700 transition-colors cursor-pointer"
+                      >
+                        <Zap size={13} className="text-teal-600 shrink-0" />
+                        <span className="font-medium">Exergy &amp; Carbon Footprint</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================
+              PANEL 5: ECOSYSTEM & COMPANION PORTALS (Compact 3-Column List)
+              ZERO BULKY SUB-CARDS!
+              ======================================================== */}
+          {activeDropdown === 'ecosystem' && (
+            <div className="px-6 sm:px-10 lg:px-12 py-3.5 max-w-[1720px] mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                    <Calculator className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="font-bold text-xs text-slate-900">DesignCalculators.co.in</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-snug">
+                    Free engineering calculators for cable sizing, pressure vessels, pipe hydraulics &amp; control valves.
+                  </p>
+                  <a
+                    href="https://designcalculators.co.in"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 mt-1.5 group"
+                  >
+                    <span>Visit Free Calculator Portal</span>
+                    <ExternalLink size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                  </a>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                    <BarChart3 className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                    <span className="font-bold text-xs text-slate-900">ReliabilityTools.co.in</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-1 leading-snug">
+                    Weibull 2P/3P analysis, MTBF/MTTR metrics, Root Cause Analysis &amp; IEC 61508/61511 SIL verification.
+                  </p>
+                  <a
+                    href="https://reliabilitytools.co.in"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-violet-600 hover:text-violet-800 flex items-center gap-1 mt-1.5 group"
+                  >
+                    <span>Visit Reliability Portal</span>
+                    <ExternalLink size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                  </a>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                    <Globe className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span className="font-bold text-xs text-slate-900">LiveSimulators Departments</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-1 text-[11px]">
+                    {parentDisciplines.map((d) => (
+                      <a
+                        key={d.code}
+                        href={d.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-slate-700 hover:text-cyan-700 truncate py-0.5 flex items-center justify-between"
+                      >
+                        <span className="truncate">{d.name.split(' ')[0]}</span>
+                        <span className="text-[9px] font-mono text-slate-400">{d.code}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          4. MOBILE DRAWER MENU
+          ======================================================== */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden w-full bg-[#080E1C] border-b border-slate-800 px-4 py-5 space-y-4 max-h-[85vh] overflow-y-auto font-sans shadow-2xl animate-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <span className="text-[11px] font-mono text-cyan-400 font-bold uppercase tracking-wider">
+              11 Mechanical Digital Twins
+            </span>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-slate-400 hover:text-white"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {simulatorsList.map((sim) => (
               <button
                 key={sim.id}
-                onClick={() => {
-                  setActiveRoute(sim.id);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`p-2.5 rounded-xl border flex items-center justify-between text-left text-xs font-mono transition-all ${
+                onClick={() => navigateAndClose(sim.id)}
+                className={`p-2.5 rounded-lg border text-left text-xs font-mono transition-all flex items-center justify-between ${
                   activeRoute === sim.id
                     ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300 font-bold'
                     : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <sim.icon size={14} className={activeRoute === sim.id ? 'text-cyan-400' : 'text-slate-400'} />
-                  <span>{sim.name}</span>
-                </div>
+                <span>{sim.name}</span>
                 <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-400">
                   {sim.standard}
                 </span>
@@ -637,27 +1440,22 @@ export const Navigation: React.FC<NavigationProps> = ({
             ))}
           </div>
 
-          <div className="pt-2 border-t border-slate-800 space-y-2">
-            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
-              Engineering Disciplines
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {disciplines.map((d) => (
-                <a
-                  key={d.code}
-                  href={d.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-slate-900/50 border border-slate-800 text-slate-300 hover:text-cyan-300 flex items-center justify-between"
-                >
-                  <span>{d.name}</span>
-                  <span className="text-[9px] font-mono text-cyan-400">{d.code}</span>
-                </a>
-              ))}
-            </div>
+          <div className="pt-3 border-t border-slate-800 flex items-center gap-2">
+            <button
+              onClick={() => navigateAndClose('workbench')}
+              className="flex-1 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-bold text-center"
+            >
+              Mission Control Workbench
+            </button>
+            <button
+              onClick={() => navigateAndClose('standards')}
+              className="flex-1 py-2 rounded-lg bg-slate-800 text-slate-300 font-mono text-xs text-center"
+            >
+              Standards Matrix
+            </button>
           </div>
         </div>
       )}
-    </header>
+    </div>
   );
 };
