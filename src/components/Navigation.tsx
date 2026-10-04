@@ -123,7 +123,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   const disciplines = [
     { name: 'Electrical Engineering', code: 'EE-200', href: 'https://livesimulators.com/department/electrical', desc: 'Circuits, RF Lines, 3-Phase Grids' },
-    { name: 'Mechanical Systems', code: 'ME-400', href: 'https://livesimulators.com/department/mechanical', desc: 'Vibrations, Gears, Cycles & Turbomachinery', isCurrent: true },
+    { name: 'Mechanical Systems', code: 'ME-400', href: 'https://mech.livesimulators.com', desc: 'Vibrations, Gears, Cycles & Turbomachinery', isCurrent: true },
     { name: 'Control & Signals', code: 'CS-300', href: 'https://livesimulators.com/department/control', desc: 'PID Tuning, Bode, Nyquist & Root Locus' },
     { name: 'Chemical & Process', code: 'CH-250', href: 'https://livesimulators.com/department/chemical', desc: 'CSTR Kinetics, Distillation, Exchangers' },
     { name: 'Civil & Structural', code: 'CE-320', href: 'https://livesimulators.com/department/civil', desc: 'Beam Bending, Trusses & Seismic Drift' },

@@ -48,7 +48,7 @@ export const LiveSimulatorsFooter: React.FC<LiveSimulatorsFooterProps> = ({
 
   const disciplines = [
     { name: 'Electrical Engineering', code: 'EE-200', href: 'https://livesimulators.com/department/electrical' },
-    { name: 'Mechanical Systems', code: 'ME-400', href: 'https://livesimulators.com/department/mechanical', isCurrent: true },
+    { name: 'Mechanical Systems', code: 'ME-400', href: 'https://mech.livesimulators.com', isCurrent: true },
     { name: 'Control & Signals', code: 'CS-300', href: 'https://livesimulators.com/department/control' },
     { name: 'Chemical & Process', code: 'CH-250', href: 'https://livesimulators.com/department/chemical' },
     { name: 'Civil & Structural', code: 'CE-320', href: 'https://livesimulators.com/department/civil' },

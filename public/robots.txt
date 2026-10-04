@@ -1,5 +1,5 @@
 # robots.txt for LiveSimulators Mechanical Engineering Section
-# https://livesimulators.com/department/mechanical
+# https://mech.livesimulators.com
 
 User-agent: *
 Allow: /
@@ -43,4 +43,4 @@ User-agent: cohere-ai
 Allow: /
 Allow: /llms.txt
 
-Sitemap: https://livesimulators.com/department/mechanical/sitemap.xml
+Sitemap: https://mech.livesimulators.com/sitemap.xml

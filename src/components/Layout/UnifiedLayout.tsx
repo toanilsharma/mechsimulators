@@ -43,8 +43,8 @@ export const UnifiedLayout: React.FC<UnifiedLayoutProps> = ({
     if (activeSimulatorId) {
       return mechanicalSims.find((s) => s.id === activeSimulatorId);
     }
-    // Extract ID from route if formatted like /mechanical/lab/[id]
-    const match = currentRoute.match(/\/mechanical\/lab\/([a-zA-Z0-9_-]+)/);
+    // Extract ID from route if formatted like /[id] or /mechanical/lab/[id]
+    const match = currentRoute.match(/(?:\/mechanical\/lab\/|\/)([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
       return mechanicalSims.find((s) => s.id === match[1]);
     }

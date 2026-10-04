@@ -735,12 +735,12 @@ function MainAppShell() {
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         mechanicalSims={MECHANICAL_SIMS}
-        currentRoute={`/mechanical/lab/${activeRoute}`}
+        currentRoute={`/${activeRoute}`}
         onNavigate={(route) => {
-          const match = route.match(/\/mechanical\/lab\/([a-zA-Z0-9_-]+)/);
+          const match = route.match(/(?:\/mechanical\/lab\/|\/)([a-zA-Z0-9_-]+)/);
           if (match && match[1]) {
             setActiveRoute(match[1] as any);
-          } else if (route === '/mechanical' || route.startsWith('/mechanical#')) {
+          } else if (route === '/' || route === '/mechanical' || route.startsWith('/mechanical#')) {
             setActiveRoute('home');
           } else {
             window.location.href = route;

@@ -99,7 +99,14 @@ const VALID_ROUTES: RouteId[] = [
 const resolveInitialRoute = (): RouteId => {
   if (typeof window === 'undefined') return 'home';
 
-  // Check URL query parameters (?sim=pump or ?route=portal or ?page=welcome)
+  // 1. Check URL pathname (e.g. /compressor, /pump, /turbine)
+  const rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+  if (rawPath === 'welcome') return 'portal';
+  if (VALID_ROUTES.includes(rawPath as RouteId)) {
+    return rawPath as RouteId;
+  }
+
+  // 2. Check URL query parameters (?sim=pump or ?route=portal or ?page=welcome)
   const urlParams = new URLSearchParams(window.location.search);
   const paramRoute = (urlParams.get('sim') || urlParams.get('route') || urlParams.get('page'))?.toLowerCase();
   if (paramRoute === 'welcome') return 'portal';
@@ -107,7 +114,7 @@ const resolveInitialRoute = (): RouteId => {
     return paramRoute as RouteId;
   }
 
-  // Check hash
+  // 3. Check hash (#pump, #compressor, etc. for backward compatibility)
   const rawHash = window.location.hash.replace('#', '').toLowerCase();
   if (rawHash === 'welcome') return 'portal';
   if (VALID_ROUTES.includes(rawHash as RouteId)) {
@@ -219,9 +226,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setInjectedSimulatorInputs(null);
   }, []);
 
-  // Sync hash routing
+  // Sync URL routing (pathname and hash)
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleUrlChange = () => {
+      // 1. Check pathname first
+      const rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+      if (rawPath === 'welcome') {
+        setActiveRouteState('portal');
+        return;
+      }
+      if (VALID_ROUTES.includes(rawPath as RouteId)) {
+        setActiveRouteState(rawPath as RouteId);
+        return;
+      }
+
+      // 2. Check hash
       const rawHash = window.location.hash.replace('#', '').toLowerCase();
       if (rawHash === 'welcome') {
         setActiveRouteState('portal');
@@ -230,18 +249,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const hash = rawHash as RouteId;
       if (VALID_ROUTES.includes(hash)) {
         setActiveRouteState(hash);
-      } else if (!window.location.hash) {
+        return;
+      }
+
+      if (!rawPath && !window.location.hash) {
         setActiveRouteState('home');
       }
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
   }, []);
 
   const setActiveRoute = useCallback((route: RouteId) => {
     setActiveRouteState(route);
-    window.location.hash = route === 'home' ? '' : `#${route}`;
+    const targetPath = route === 'home' ? '/' : `/${route}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
+    if (window.location.hash) {
+      window.history.replaceState(null, '', targetPath);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 

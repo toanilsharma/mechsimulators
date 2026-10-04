@@ -1,78 +1,122 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Parent Department Landing Page -->
+  <!-- Mechanical Engineering Digital Twins Landing Page -->
   <url>
-    <loc>https://livesimulators.com/department/mechanical</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   <!-- 11 Mechanical Digital Twin Simulators -->
   <url>
-    <loc>https://livesimulators.com/department/mechanical#pump</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/compressor</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#compressor</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/pump</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#recip</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/turbine</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#turbine</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/gearbox</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#gearbox</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/bearing</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#bearing</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/journal</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#journal</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/rotor</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#rotor</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/alignment</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#pipe</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/pipe</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#seal</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/seal</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://livesimulators.com/department/mechanical#alignment</loc>
-    <lastmod>2026-10-03</lastmod>
+    <loc>https://mech.livesimulators.com/recip</loc>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+
+  <!-- Interactive Hubs & Reference Documentation -->
+  <url>
+    <loc>https://mech.livesimulators.com/workbench</loc>
+    <lastmod>2026-10-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://mech.livesimulators.com/portal</loc>
+    <lastmod>2026-10-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://mech.livesimulators.com/standards</loc>
+    <lastmod>2026-10-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://mech.livesimulators.com/methodology</loc>
+    <lastmod>2026-10-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://mech.livesimulators.com/faq</loc>
+    <lastmod>2026-10-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://mech.livesimulators.com/about</loc>
+    <lastmod>2026-10-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://mech.livesimulators.com/disclaimer</loc>
+    <lastmod>2026-10-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
 </urlset>
