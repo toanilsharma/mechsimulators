@@ -39,6 +39,7 @@ import {
   BarChart3,
   SlidersHorizontal,
   Zap,
+  Home,
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -320,24 +321,47 @@ export const Navigation: React.FC<NavigationProps> = ({
         id="app-header"
         className="h-[58px] min-h-[58px] bg-[#070D1A]/95 backdrop-blur-xl border-b border-[#1A2E4C] text-slate-200 px-3 sm:px-5 md:px-6 lg:px-8 flex items-center justify-between gap-3 shadow-[0_4px_30px_rgba(0,0,0,0.85)] relative z-40"
       >
-        {/* Brand Logo & MECH LAB Pill Badge linking to parent website */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Left Side Header Cluster: Big Home Page Button + Small LiveSimulators.com Parent Link */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Big Home Page Button */}
+          <button
+            onClick={() => navigateAndClose('home')}
+            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer text-left group ${
+              activeRoute === 'home'
+                ? 'bg-gradient-to-r from-cyan-950/90 to-blue-950/70 border-cyan-400 text-white shadow-[0_0_18px_rgba(6,182,212,0.35)]'
+                : 'bg-slate-900/80 border-slate-700/80 hover:border-cyan-400 text-slate-200 hover:bg-slate-800 hover:shadow-[0_0_14px_rgba(6,182,212,0.2)]'
+            }`}
+            title="Return to Mechanical Engineering Twins Homepage from anywhere"
+          >
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-slate-950 shadow-[0_0_14px_rgba(6,182,212,0.4)] group-hover:scale-105 transition-transform shrink-0">
+              <Home className="w-4.5 h-4.5 text-slate-950 stroke-[2.2]" />
+            </div>
+            <div className="flex flex-col text-left leading-tight">
+              <div className="flex items-center gap-1.5">
+                <span className="font-display text-sm font-extrabold text-white tracking-wide group-hover:text-cyan-300 transition-colors">
+                  HOME
+                </span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-cyan-950 border border-cyan-500/60 text-cyan-300 tracking-wider">
+                  MECH LAB
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400 group-hover:text-slate-300">
+                11 Digital Twins
+              </span>
+            </div>
+          </button>
+
+          {/* Small Parent Website Link */}
           <a
             href="https://livesimulators.com"
-            className="flex items-center gap-2.5 group cursor-pointer text-left no-underline"
-            title="Return to parent website LiveSimulators.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Visit parent ecosystem website: LiveSimulators.com"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono text-slate-400 hover:text-cyan-300 bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-cyan-500/50 transition-all shrink-0 group no-underline"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/10 border border-cyan-500/50 flex items-center justify-center text-cyan-400 shadow-[0_0_18px_rgba(6,182,212,0.25)] group-hover:scale-105 group-hover:border-cyan-400 transition-all shrink-0">
-              <Sparkles className="w-4.5 h-4.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-display text-lg font-bold text-white tracking-tight">
-                LiveSimulators<span className="text-cyan-400">.com</span>
-              </span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)] tracking-wider">
-                MECH LAB
-              </span>
-            </div>
+            <Globe className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
+            <span className="font-semibold">LiveSimulators<span className="text-cyan-400">.com</span></span>
+            <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 transition-colors" />
           </a>
         </div>
 
